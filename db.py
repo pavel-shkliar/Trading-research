@@ -86,6 +86,26 @@ CREATE TABLE IF NOT EXISTS dvol (
     close DOUBLE PRECISION NOT NULL,
     UNIQUE (currency, ts)
 );
+
+-- Таблица для посчитанных индикаторов (шаг 4 плана) - в отличие от таблиц
+-- выше, тут не "сырые" данные с биржи, а то, что мы сами вычислили поверх
+-- них. Отдельная таблица, а не колонки в candles - чтобы можно было
+-- пересчитать/удалить индикаторы и переделать заново, не трогая сырые
+-- данные.
+CREATE TABLE IF NOT EXISTS indicators (
+    symbol TEXT NOT NULL,
+    date TIMESTAMPTZ NOT NULL,
+    rsi_14 DOUBLE PRECISION,
+    bb_upper DOUBLE PRECISION,
+    bb_mid DOUBLE PRECISION,
+    bb_lower DOUBLE PRECISION,
+    vwap_20 DOUBLE PRECISION,
+    funding_rate_daily_avg DOUBLE PRECISION,
+    funding_percentile_90d DOUBLE PRECISION,
+    oi_change_pct DOUBLE PRECISION,
+    price_oi_divergence TEXT,
+    UNIQUE (symbol, date)
+);
 """
 
 
@@ -163,6 +183,20 @@ def get_saved_range(table: str, time_column: str, symbol_column: str, symbol_val
                 (symbol_value,),
             )
             return cur.fetchone()
+    finally:
+        conn.close()
+
+
+def read_df(query: str, params: tuple = None):
+    """Выполняет SQL-запрос и возвращает результат как pandas DataFrame -
+    удобно для скриптов, которые считают индикаторы (compute_indicators.py
+    и далее бэктест)."""
+    import pandas as pd  # импорт здесь, а не в шапке файла - чтобы модуль
+    # db.py оставался лёгким для скриптов, которым pandas не нужен
+
+    conn = get_connection()
+    try:
+        return pd.read_sql(query, conn, params=params)
     finally:
         conn.close()
 
