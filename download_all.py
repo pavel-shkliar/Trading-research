@@ -49,6 +49,6 @@ def main(days: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--days", type=int, default=730)
+    parser.add_argument("--days", type=int, default=2600)
     args = parser.parse_args()
     main(args.days)

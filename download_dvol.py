@@ -9,7 +9,7 @@ DVOL — "фильтр умного рынка" (см. PLAN.md): если фью
 
 Запуск:
     python download_dvol.py --days 5
-    python download_dvol.py --days 730
+    python download_dvol.py --days 2600  (Deribit просто вернёт пусто до 2021 года, когда DVOL появился)
 """
 
 import argparse
@@ -89,7 +89,7 @@ def download(currency: str, days_back: int) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--days", type=int, default=730)
+    parser.add_argument("--days", type=int, default=2600)
     parser.add_argument("--currency", default=CURRENCY)
     args = parser.parse_args()
 

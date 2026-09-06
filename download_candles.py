@@ -4,7 +4,7 @@ candles в Postgres. Инкрементально — качает только 
 
 Запуск:
     python download_candles.py --days 5     (короткий тест)
-    python download_candles.py --days 730   (полная история за 2 года)
+    python download_candles.py --days 2600  (максимум истории, с 2019 года)
 """
 
 import argparse
@@ -96,7 +96,7 @@ def download(symbol: str, days_back: int) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--days", type=int, default=730)
+    parser.add_argument("--days", type=int, default=2600)
     parser.add_argument("--symbol", default=SYMBOL)
     args = parser.parse_args()
 
