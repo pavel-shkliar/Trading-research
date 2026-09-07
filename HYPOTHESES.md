@@ -159,8 +159,8 @@ sign of risk underpricing. Refines H6b, doesn't contradict it.
 
 ## H8 - Calendar effects (day of week)
 
-**Status**: interesting finding, but WITHOUT a causal explanation -
-held with caution (2026-09-07)
+**Status**: likely a multiple-comparisons artifact - only 3 of 20 coins
+significant once tested broadly (2026-09-07, see the 20-coin check below)
 
 **Formulation**: not derivatives, but time - does intraday return
 (open->close) differ by day of week? A completely different dimension
@@ -206,11 +206,28 @@ candidates considered and ruled out: Deribit's weekly options expiry
 (Fridays, not Wednesday), technical-analysis "weekly candle" conventions
 (usually Monday-anchored).
 
-**Final conclusion**: no cause found. A statistically robust, broad,
-cross-asset effect with no explanation - comparable to the historically
-documented "Monday effect" in equities, also well-documented but not
-fully explained after decades of research. Logged honestly as a real
-but low-priority-for-practical-use finding.
+**Extended to the full 20-coin universe (2026-09-07)** - the original
+test only covered BTC and ETH, for no real reason (this hypothesis
+doesn't need DVOL, it was just written following the H6b/H7 template
+that does). Re-ran across all 20 universe coins:
+
+Only **3 of 20** coins (ETH p=0.0432, HYPE p=0.0433, BTC p=0.0459) show
+a statistically significant AND positive Wednesday effect - close to
+the ~1-in-20 false positives pure chance alone would produce at a 5%
+threshold. The *direction* (Wednesday better than other days, even if
+not significant) holds on 16 of 20 coins - a mild lean, but nowhere near
+strong enough to call a real, broad effect.
+
+**Revised final conclusion**: the 20-coin check makes the original
+"broad, cross-asset, robust" framing (based on 2 coins) too strong. This
+is much closer to "found a couple of hits when scanning many candidates"
+than a genuine market-wide pattern - the academic literature's own
+inconsistency (mostly finds Monday, not Wednesday, and different studies
+disagree on which day and which coin) already hinted at this; this
+project's own 20-coin data now demonstrates it directly. Downgraded from
+"real but unexplained" to "very likely a multiple-comparisons artifact,"
+still logged (not deleted) as a concrete illustration of the exact
+failure mode this project's methodology exists to catch.
 
 ---
 
