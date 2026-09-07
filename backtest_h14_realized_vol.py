@@ -1,17 +1,17 @@
 """
-H14: низкая РЕАЛИЗОВАННАЯ волатильность (не подразумеваемая DVOL)
--> недоперформанс, та же механика что H6b, но доступна для ВСЕХ монет
-(не только BTC/ETH, у которых есть DVOL от Deribit).
+H14: low REALIZED volatility (not the implied DVOL) -> underperformance,
+the same mechanism as H6b but available for ALL coins, not just BTC/ETH
+(which are the only ones with Deribit's DVOL).
 
-Реализованная волатильность = скользящее стандартное отклонение дневных
-доходностей за 90 дней - считается прямо из цены, никаких дополнительных
-данных не нужно. Идея та же: аномально спокойный рынок (по факту цены,
-не по опционам) может означать недооценку риска, а не устойчивое затишье.
+Realized volatility = rolling 90-day standard deviation of daily returns,
+computed directly from price, no extra data needed. Same idea: an
+unusually calm market (by realized price action, not options) may signal
+underpriced risk rather than durable calm.
 
-Горизонт 60 дней (якорь). Монеты с историей < 400 дней исключены (как
-и в H1b multi-symbol). Тестируем И по каждой монете, И объединённым пулом.
+Horizon: 60 days (the anchor). Coins with < 400 days of history excluded
+(same as the H1b multi-symbol test). Tested both per-coin and pooled.
 
-Запуск:
+Usage:
     python backtest_h14_realized_vol.py
 """
 
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     ci_low, ci_high = mean_excess - 1.96 * se, mean_excess + 1.96 * se
     t_stat, p_value = stats.ttest_1samp(all_excess, 0)
 
-    print(f"\n=== Объединённый пул ===")
-    print(f"Всего эпизодов: {n_total}")
-    print(f"Средняя избыточная доходность: {mean_excess:.2f}%")
-    print(f"95% ДИ: [{ci_low:.2f}%, {ci_high:.2f}%]")
-    print(f"t-test против нуля: t={t_stat:.2f}, p={p_value:.4f}")
+    print(f"\n=== Pooled across all coins ===")
+    print(f"Total episodes: {n_total}")
+    print(f"Mean excess return: {mean_excess:.2f}%")
+    print(f"95% CI: [{ci_low:.2f}%, {ci_high:.2f}%]")
+    print(f"t-test vs zero: t={t_stat:.2f}, p={p_value:.4f}")

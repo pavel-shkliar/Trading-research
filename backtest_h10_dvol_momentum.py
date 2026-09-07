@@ -1,19 +1,18 @@
 """
-H10: уточнение H6b - DVOL-самодовольство ПОСЛЕ ралли vs БЕЗ
-предшествующего ралли.
+H10: refines H6b - DVOL complacency AFTER a rally vs WITHOUT a preceding
+rally.
 
-Идея: "самодовольство после ралли" может быть частично нормальной
-реакцией (люди довольны прибылью, расслабились заслуженно). А вот
-"самодовольство БЕЗ ралли" - более странная ситуация: почему рынок
-спокоен, если цена даже не росла? Возможно, это более чистый признак
-недооценки риска.
+Idea: "complacency after a rally" may partly be a normal reaction (people
+are content with their gains, relaxed for a reason). "Complacency
+WITHOUT a rally" is stranger - why would the market be calm if price
+hasn't even gone up? Possibly a cleaner signal of risk underpricing.
 
-Разделяем по 90-дневной доходности ДО сигнала: положительная = "после
-ралли", отрицательная/нулевая = "без ралли".
+Split by the trailing 90-day return before the signal: positive = "after
+a rally", negative/zero = "without a rally".
 
-Горизонт 60 дней - якорный для H6b.
+Horizon: 60 days, the H6b anchor.
 
-Запуск:
+Usage:
     python backtest_h10_dvol_momentum.py
 """
 
@@ -57,15 +56,15 @@ if __name__ == "__main__":
         fwd = forward_return(df["close"], HORIZON)
         baseline = summarize(fwd)
 
-        print(f"=== {symbol} (горизонт {HORIZON} дней) ===")
+        print(f"=== {symbol} (horizon {HORIZON}d) ===")
         for label, mask in [
-            ("После ралли (90д доходность > 0)", after_rally),
-            ("Без ралли (90д доходность <= 0)", without_rally),
+            ("After a rally (90d return > 0)", after_rally),
+            ("Without a rally (90d return <= 0)", without_rally),
         ]:
             s = summarize(fwd[mask])
             if s["mean"] is None:
-                print(f"  {label}: недостаточно данных")
+                print(f"  {label}: not enough data")
                 continue
             edge = s["mean"] - baseline["mean"]
-            print(f"  {label}: n={s['n']}, доходность={s['mean']:.2f}%, база={baseline['mean']:.2f}%, эдж={edge:.2f}")
+            print(f"  {label}: n={s['n']}, return={s['mean']:.2f}%, baseline={baseline['mean']:.2f}%, edge={edge:.2f}")
         print()

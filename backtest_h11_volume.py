@@ -1,19 +1,18 @@
 """
-H11: высокий/низкий объём торгов -> отличается ли доходность?
+H11: high/low trading volume -> different return?
 
-Идея (независимая от дня недели): даже в режиме 24/7 объём торгов
-колеблется - проверяем, предсказывает ли САМ объём (не день недели)
-что-то про доходность следующего дня.
+Idea (independent of day-of-week): even in a 24/7 market, volume
+fluctuates - checking whether volume ITSELF (not the day of week)
+predicts anything about the next day's return.
 
-Делим дни на квартили по объёму (относительно скользящего окна 90 дней -
-та же логика нормализации, что и для funding rate/DVOL, чтобы не путать
-"объём вырос со временем в принципе" с "сегодня объём необычно высокий
-для последних 90 дней").
+Days are split by volume percentile over a rolling 90-day window (same
+normalization logic as funding rate/DVOL, so we're measuring "unusually
+high for the last 90 days," not "volume has grown over time in general").
 
-Смотрим доходность СЛЕДУЮЩЕГО дня (не того же дня - иначе просто измеряем
-корреляцию объёма и волатильности внутри одного дня, что тривиально).
+Looks at the NEXT day's return (not the same day - that would just
+measure the trivial same-day correlation between volume and volatility).
 
-Запуск:
+Usage:
     python backtest_h11_volume.py
 """
 
@@ -49,10 +48,10 @@ if __name__ == "__main__":
         low_volume = volume_percentile < 0.10
         normal_volume = (volume_percentile >= 0.10) & (volume_percentile <= 0.90)
 
-        print(f"=== {symbol} (доходность СЛЕДУЮЩЕГО дня после объёма) ===")
-        for label, mask in [("Высокий объём (>90 перцентиль)", high_volume),
-                             ("Обычный объём", normal_volume),
-                             ("Низкий объём (<10 перцентиль)", low_volume)]:
+        print(f"=== {symbol} (next-day return after volume) ===")
+        for label, mask in [("High volume (>90th pct)", high_volume),
+                             ("Normal volume", normal_volume),
+                             ("Low volume (<10th pct)", low_volume)]:
             vals = next_day_return[mask].dropna()
-            print(f"  {label}: n={len(vals)}, среднее={vals.mean():.3f}%, медиана={vals.median():.3f}%")
+            print(f"  {label}: n={len(vals)}, mean={vals.mean():.3f}%, median={vals.median():.3f}%")
         print()

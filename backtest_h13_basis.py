@@ -1,24 +1,24 @@
 """
-H13: экстремальный базис (разница фьючерс/спот) -> схлопывание разрыва.
+H13: extreme futures/spot basis -> convergence.
 
-Свежий, но классический деривативный угол с настоящей экономической
-причиной (в отличие от H8): базис = (цена фьючерса - цена спота) / цена
-спота. В теории арбитраж должен держать эту разницу маленькой - если
-фьючерс дороже спота намного (contango), выгодно продавать фьючерс
-и покупать спот (cash-and-carry), что толкает базис обратно к нулю.
+A fresh but classic derivatives angle with a real economic rationale
+(unlike H8): basis = (futures price - spot price) / spot price. In
+theory, arbitrage should keep this small - if futures trade well above
+spot (contango), selling futures and buying spot (cash-and-carry) is
+profitable and pushes the basis back toward zero.
 
-Гипотеза: экстремально высокий базис (фьючерс намного дороже спота,
-percentile>0.95) -> ждём, что фьючерсная цена НЕДОперформит спот
-впоследствии (базис схлопывается через отставание фьючерса, а не только
-через рост спота).
+Hypothesis: extremely high basis (futures far above spot,
+percentile > 0.95) -> the futures price subsequently UNDERPERFORMS spot
+(the basis converges via the futures side lagging, not only via spot
+catching up).
 
-Считаем через доходность ФЬЮЧЕРСА (то, чем мы торгуем) относительно
-своей же истории - как и везде, база = все дни.
+Measured through the FUTURES return (what we actually trade) relative to
+its own history, baseline = all days, as elsewhere.
 
-Горизонт 60 дней. Полная рутина: percentile 90д, эпизоды, walk-forward,
-тесты значимости.
+Horizon: 60 days. Full routine: 90d percentile, episodes, walk-forward,
+significance tests.
 
-Запуск:
+Usage:
     python backtest_h13_basis.py
 """
 
@@ -63,27 +63,27 @@ if __name__ == "__main__":
         fwd = forward_return(df["close"], HORIZON)
         baseline = summarize(fwd)
 
-        print(f"=== {symbol} (горизонт {HORIZON} дней) ===")
+        print(f"=== {symbol} (horizon {HORIZON}d) ===")
         for label, mask in [
-            ("Базис высокий (фьючерс дорогой, ждём недоперформанса)", high_basis),
-            ("Базис низкий (фьючерс дешёвый, ждём переперформанса)", low_basis),
+            ("Basis high (futures expensive, expect underperformance)", high_basis),
+            ("Basis low (futures cheap, expect outperformance)", low_basis),
         ]:
             s = summarize(fwd[mask])
             if s["mean"] is None or s["n"] < 5:
-                print(f"  {label}: n={s['n']} - недостаточно данных")
+                print(f"  {label}: n={s['n']} - not enough data")
                 continue
             edge = s["mean"] - baseline["mean"]
             episode_returns = fwd[mask].dropna()
             t, p_ttest = stats.ttest_ind(episode_returns, fwd.dropna(), equal_var=False)
-            print(f"  {label}: n={s['n']}, доходность={s['mean']:.2f}%, база={baseline['mean']:.2f}%, эдж={edge:.2f}, p={p_ttest:.4f}")
+            print(f"  {label}: n={s['n']}, return={s['mean']:.2f}%, baseline={baseline['mean']:.2f}%, edge={edge:.2f}, p={p_ttest:.4f}")
 
-        print("  Walk-forward (базис высокий):")
+        print("  Walk-forward (high basis):")
         for start, end, label in PERIODS:
             mask = (df["date"] >= pd.Timestamp(start, tz="UTC")) & (df["date"] < pd.Timestamp(end, tz="UTC"))
             sig = fwd[mask & high_basis].dropna()
             base = fwd[mask].dropna()
             if len(sig) < 3:
-                print(f"    {label}: n={len(sig)} - мало данных")
+                print(f"    {label}: n={len(sig)} - too little data")
                 continue
-            print(f"    {label}: n={len(sig)}, доходность={sig.mean():.2f}%, база={base.mean():.2f}%, эдж={sig.mean()-base.mean():.2f}")
+            print(f"    {label}: n={len(sig)}, return={sig.mean():.2f}%, baseline={base.mean():.2f}%, edge={sig.mean()-base.mean():.2f}")
         print()
