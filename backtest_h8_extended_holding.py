@@ -1,19 +1,16 @@
 """
-Расширение H8: не только "открылся и закрылся в тот же день", а полная
-сетка "день входа (открытие) x срок удержания в днях (1-7) -> закрытие".
-Например: "открылся в среду утром, закрылся в понедельник вечером" =
-вход в среду, удержание 6 дней (среда, четверг, пятница, суббота,
-воскресенье, понедельник).
+Extension of H8: not just "enter and exit same day," but the full grid of
+entry weekday x holding period (1-7 days) -> exit. E.g. "enter Wednesday
+morning, exit Monday evening" = enter Wednesday, hold 6 days (Wed, Thu,
+Fri, Sat, Sun, Mon).
 
-ОСОБАЯ ОСТОРОЖНОСТЬ: это 7 дней входа x 7 сроков = 49 комбинаций за
-раз - в разы больше "попыток", чем даже исходный скан 7 дней недели.
-Чем больше комбинаций перебираем, тем выше шанс найти что-то "красивое"
-просто по случайности (см. заметку про множественные сравнения). Лучшую
-комбинацию логика найдёт всегда, даже если реального эффекта нет нигде -
-поэтому результат тут смотрим только как "куда копать дальше", не как
-готовый вывод.
+CAUTION: this is 7 entry days x 7 hold lengths = 49 combinations at once
+- far more "attempts" than even the original 7-day scan (see the
+multiple-comparisons note in HYPOTHESES.md). The logic will always find
+some "best" combination, even with no real effect anywhere - treat this
+as a map of where to look further, not a finished conclusion.
 
-Запуск:
+Usage:
     python backtest_h8_extended_holding.py
 """
 
@@ -23,7 +20,7 @@ import pandas as pd
 from db import read_df
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT"]
-WEEKDAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 MAX_HOLD_DAYS = 7
 
 
@@ -44,7 +41,7 @@ def build_grid(df: pd.DataFrame) -> pd.DataFrame:
 
     rows = []
     for hold in range(1, MAX_HOLD_DAYS + 1):
-        # доходность входа в день t (open) с выходом в день t+hold-1 (close)
+        # Return for entering at day t's open, exiting at day t+hold-1's close.
         exit_idx = np.arange(n) + hold - 1
         valid = exit_idx < n
         ret = np.full(n, np.nan)
@@ -71,11 +68,11 @@ if __name__ == "__main__":
         pivot = grid.pivot(index="entry_weekday", columns="hold_days", values="avg_return")
         pivot = pivot.reindex(WEEKDAY_NAMES)
 
-        print(f"=== {symbol}: средняя доходность (%) по (день входа x срок удержания) ===")
+        print(f"=== {symbol}: average return (%) by (entry weekday x hold days) ===")
         print(pivot.to_string())
 
         best = grid.loc[grid["avg_return"].idxmax()]
         worst = grid.loc[grid["avg_return"].idxmin()]
-        print(f"Лучшая комбинация: вход {best['entry_weekday']}, держать {int(best['hold_days'])} дн. -> {best['avg_return']:.2f}%")
-        print(f"Худшая комбинация: вход {worst['entry_weekday']}, держать {int(worst['hold_days'])} дн. -> {worst['avg_return']:.2f}%")
+        print(f"Best combo: enter {best['entry_weekday']}, hold {int(best['hold_days'])}d -> {best['avg_return']:.2f}%")
+        print(f"Worst combo: enter {worst['entry_weekday']}, hold {int(worst['hold_days'])}d -> {worst['avg_return']:.2f}%")
         print()

@@ -1,24 +1,23 @@
 """
-Углубление в механику H6b: что именно происходит с ценой день за днём
-после сигнала (DVOL-самодовольство), а не только итоговая точка на
-60-й день.
+Digging into H6b's mechanism: what actually happens to price day by day
+after the signal (DVOL complacency), not just the endpoint at day 60.
 
-Отвечает на вопросы:
-- Недоперформанс нарастает постепенно или происходит резким рывком?
-- В какой момент внутри 60-дневного окна разница с базой самая большая?
-- Насколько глубокая просадка случается ВНУТРИ окна (не только в конце) -
-  проверка идеи "затишье перед бурей" (резкий обвал), а не "медленное
-  сползание"
+Answers:
+- Does the underperformance build gradually or arrive as a sharp move?
+- Where inside the 60-day window is the gap vs baseline largest?
+- How deep is the worst drawdown WITHIN the window (not just at the
+  end) - tests "calm before the storm" (a sharp crash) against "slow
+  bleed" (gradual underperformance)
 
-Метод: для каждого дня считаем не одну доходность (через фиксированный
-горизонт), а ВЕСЬ путь - доходность через 1, 2, 3, ..., 60 дней вперёд.
-Усредняем эти пути отдельно для сигнальных эпизодов и для базы (всех
-дней) - получаем две кривые для сравнения.
+Method: for each day, compute the full return path (1, 2, 3, ..., 60
+days forward), not just one fixed-horizon number. Average these paths
+separately for signal episodes and for the baseline (all days) to get
+two comparable curves.
 
-Также считаем "худшую точку" внутри окна (максимальную просадку от
-дня сигнала за 60 дней) - отдельно от финальной доходности на 60-й день.
+Also computes the worst point reached within the 60-day window (max
+drawdown from the signal day), separate from the final day-60 return.
 
-Запуск:
+Usage:
     python backtest_h6b_mechanism.py
 """
 
@@ -50,16 +49,15 @@ def load_data(symbol: str) -> pd.DataFrame:
 
 
 def build_return_matrix(close: pd.Series, max_horizon: int) -> np.ndarray:
-    """Строит матрицу [день, горизонт] - доходность (%) от каждого дня
-    через 1, 2, ..., max_horizon дней вперёд. NaN там, где будущего ещё
-    нет (конец истории)."""
+    """[day, horizon] matrix of the return (%) from each day, 1..max_horizon
+    days forward. NaN where the future doesn't exist yet (end of history)."""
     n = len(close)
     matrix = np.full((n, max_horizon), np.nan)
     close_arr = close.values
     for h in range(1, max_horizon + 1):
         shifted = np.roll(close_arr, -h)
         ret = (shifted - close_arr) / close_arr * 100
-        ret[n - h:] = np.nan  # конец ряда - там "будущее" на самом деле начало ряда из-за roll
+        ret[n - h:] = np.nan  # np.roll wraps around; these rows are invalid
         matrix[:, h - 1] = ret
     return matrix
 
@@ -73,7 +71,6 @@ def analyze(symbol: str) -> pd.DataFrame:
     signal_matrix = matrix[episode_mask]
     baseline_matrix = matrix
 
-    # Средняя траектория в каждой контрольной точке
     rows = []
     for cp in CHECKPOINTS:
         signal_vals = signal_matrix[:, cp - 1]
@@ -84,7 +81,7 @@ def analyze(symbol: str) -> pd.DataFrame:
             "baseline_avg_return": np.nanmean(baseline_vals),
         })
 
-    # Худшая точка внутри 60-дневного окна (максимальная просадка от дня сигнала)
+    # Worst point reached within the 60-day window (max drawdown from the signal day)
     signal_worst_point = np.nanmin(signal_matrix, axis=1)
     baseline_worst_point = np.nanmin(baseline_matrix, axis=1)
 
@@ -93,9 +90,9 @@ def analyze(symbol: str) -> pd.DataFrame:
 
     print(f"\n=== {symbol} ===")
     print(result.to_string(index=False))
-    print(f"Средняя ХУДШАЯ точка за 60 дней (просадка от старта):")
-    print(f"  сигнальные эпизоды: {np.nanmean(signal_worst_point):.2f}%  (n={(~np.isnan(signal_worst_point)).sum()})")
-    print(f"  база (все дни):      {np.nanmean(baseline_worst_point):.2f}%")
+    print(f"Average WORST point over 60 days (drawdown from start):")
+    print(f"  signal episodes: {np.nanmean(signal_worst_point):.2f}%  (n={(~np.isnan(signal_worst_point)).sum()})")
+    print(f"  baseline (all days): {np.nanmean(baseline_worst_point):.2f}%")
 
     return result
 

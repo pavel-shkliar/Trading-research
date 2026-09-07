@@ -1,19 +1,18 @@
 """
-H7: скорость изменения funding rate, а не только его уровень.
+H7: funding rate velocity, not just its level.
 
-Идея: "перегружены шортами" (funding_percentile_90d < 0.05) может
-случиться двумя разными путями:
-- РЕЗКИЙ РАЗВОРОТ: ещё 14 дней назад рынок не был перегружен, а сейчас
-  уже да - быстрая капитуляция шортов в панике
-- ХРОНИЧЕСКОЕ СОСТОЯНИЕ: уже был перегружен 14 дней назад и остаётся
-  таким же - вялый, затянувшийся пессимизм, не резкое событие
+"Crowded shorts" (funding_percentile_90d < 0.05) can arise two ways:
+- SUDDEN FLIP: not crowded 14 days ago, crowded now - a fast panic
+  capitulation.
+- CHRONIC STATE: was already crowded 14 days ago and still is - a
+  drawn-out, low-intensity pessimism rather than a sharp event.
 
-Гипотеза: резкий разворот - более сильный сигнал (паническая капитуляция
-исчерпывает продавцов быстрее), чем хроническое состояние.
+Hypothesis: a sudden flip is a stronger signal (panic capitulation
+exhausts sellers faster) than a chronic state.
 
-Горизонт 60 дней (якорный для H6b/H1b). Проверяем на BTC и ETH.
+Horizon: 60 days (the H1b/H6b anchor). Checked on BTC and ETH.
 
-Запуск:
+Usage:
     python backtest_h7_funding_velocity.py
 """
 
@@ -58,13 +57,13 @@ if __name__ == "__main__":
         fwd = forward_return(df["close"], HORIZON)
         baseline = summarize(fwd)
 
-        print(f"=== {symbol} (горизонт {HORIZON} дней) ===")
-        for label, mask in [("Резкий разворот (не был перегружен 14д назад)", sudden_flip),
-                             ("Хроническое состояние (был перегружен и 14д назад)", chronic)]:
+        print(f"=== {symbol} (horizon {HORIZON}d) ===")
+        for label, mask in [("Sudden flip (not crowded 14d ago)", sudden_flip),
+                             ("Chronic (crowded 14d ago too)", chronic)]:
             s = summarize(fwd[mask])
             if s["mean"] is None:
-                print(f"  {label}: недостаточно данных")
+                print(f"  {label}: not enough data")
                 continue
             edge = s["mean"] - baseline["mean"]
-            print(f"  {label}: n={s['n']}, доходность={s['mean']:.2f}%, база={baseline['mean']:.2f}%, эдж={edge:.2f}")
+            print(f"  {label}: n={s['n']}, return={s['mean']:.2f}%, baseline={baseline['mean']:.2f}%, edge={edge:.2f}")
         print()

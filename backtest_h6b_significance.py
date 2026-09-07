@@ -1,15 +1,14 @@
 """
-Проверка статистической значимости H6b (DVOL-самодовольство -> недоперформанс)
-на горизонте 60 дней - том, где walk-forward показал самый согласованный
-результат (5 из 5 доступных периодов).
+Statistical significance check for H6b (DVOL complacency ->
+underperformance) at the 60-day horizon, where walk-forward showed the
+most consistent result (5 of 5 available periods).
 
-Методология та же, что для H1b (см. чат/HYPOTHESES.md): сигнальные дни
-схлопнуты в независимые эпизоды (защита от автокорреляции пересекающихся
-окон доходности), два теста значимости - Welch t-test (чувствителен
-к среднему) и Mann-Whitney U (устойчив к выбросам, сравнивает
-распределения по рангам).
+Same methodology as H1b: signal days collapsed into independent episodes
+(guards against autocorrelated overlapping return windows), two
+significance tests - Welch's t-test (sensitive to the mean) and
+Mann-Whitney U (robust to outliers, compares rank distributions).
 
-Запуск:
+Usage:
     python backtest_h6b_significance.py
 """
 
@@ -57,9 +56,9 @@ if __name__ == "__main__":
     t_stat, p_ttest = stats.ttest_ind(episode_returns, baseline_returns, equal_var=False)
     u_stat, p_mw = stats.mannwhitneyu(episode_returns, baseline_returns, alternative="less")
 
-    print(f"Горизонт: {HORIZON} дней")
-    print(f"n эпизодов = {n}")
-    print(f"Среднее сигнальной группы = {mean:.2f}%, база = {baseline_mean:.2f}%")
-    print(f"95% доверительный интервал сигнальной группы: [{ci_low:.2f}%, {ci_high:.2f}%]")
-    print(f"Welch t-test (сигнал vs база): t={t_stat:.2f}, p-value={p_ttest:.4f}")
-    print(f"Mann-Whitney U (одностороннее, сигнал < база): p-value={p_mw:.4f}")
+    print(f"Horizon: {HORIZON} days")
+    print(f"n episodes = {n}")
+    print(f"Signal group mean = {mean:.2f}%, baseline = {baseline_mean:.2f}%")
+    print(f"95% CI for the signal group: [{ci_low:.2f}%, {ci_high:.2f}%]")
+    print(f"Welch t-test (signal vs baseline): t={t_stat:.2f}, p-value={p_ttest:.4f}")
+    print(f"Mann-Whitney U (one-sided, signal < baseline): p-value={p_mw:.4f}")

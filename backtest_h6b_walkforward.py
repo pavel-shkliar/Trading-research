@@ -1,18 +1,17 @@
 """
-Walk-forward проверка H6b: DVOL-самодовольство (percentile<0.05) ->
-недоперформанс + учащение крупных падений ("затишье перед бурей").
+Walk-forward validation of H6b: DVOL complacency (percentile < 0.05) ->
+underperformance + more frequent large drops ("calm before the storm").
 
-DVOL существует только с 2021-03-24 (+90 дней на перцентиль = с
-2021-06-21) - периоды 2019-2020 и часть 2021 года будут пустыми или
-почти пустыми, это ожидаемо, не баг. База считается только по дням,
-где DVOL вообще есть, для честного сравнения (см. проблему в H3, которую
-уже решали похожим образом).
+DVOL exists only from 2021-03-24 (+90 days for the percentile = usable
+from 2021-06-21) - 2019-2020 and part of 2021 are empty or near-empty by
+design, not a bug. The baseline is restricted to days where DVOL exists,
+for a fair comparison (same issue as H3).
 
-Горизонты 30/60/90 - там, где разведочный прогон показал наиболее
-согласованный эффект. Прогоняем для BTC и ETH одновременно - DVOL
-у Deribit есть только для этих двух монет, дальше расширять некуда.
+Horizons 30/60/90 - where the exploratory pass showed the most consistent
+effect. Run for BTC and ETH together, the only two assets Deribit
+publishes DVOL for.
 
-Запуск:
+Usage:
     python backtest_h6b_walkforward.py
 """
 
@@ -49,10 +48,6 @@ if __name__ == "__main__":
     all_results = []
     for symbol in SYMBOLS:
         df = load_data(symbol)
-
-        # Оставляем только дни, где DVOL вообще существует - иначе база
-        # в ранних периодах (до 2021) включала бы дни без DVOL, что нечестно
-        # сравнивать с сигнальными днями (у которых DVOL по определению есть).
         df = df[df["dvol_percentile_90d"].notna()].reset_index(drop=True)
 
         dvol_low = df["dvol_percentile_90d"] < DVOL_LOW

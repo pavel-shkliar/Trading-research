@@ -1,10 +1,10 @@
 """
-Walk-forward проверка H8 (эффект среды) по годам - разведочный прогон
-(backtest_h8_calendar.py) нашёл эффект по всей истории сразу, тут
-проверяем устойчивость по разным рыночным периодам, как для остальных
-гипотез.
+Walk-forward validation of H8 (the Wednesday effect) by year - the
+exploratory pass (backtest_h8_calendar.py) found the effect over the
+full history at once; here we check its consistency across market
+regimes, same as every other hypothesis.
 
-Запуск:
+Usage:
     python backtest_h8_calendar_walkforward.py
 """
 
@@ -46,5 +46,5 @@ if __name__ == "__main__":
             period_df = df[mask]
             wed = period_df[period_df["weekday"] == 2]["intraday_return"].mean()
             other = period_df[period_df["weekday"] != 2]["intraday_return"].mean()
-            print(f"  {label}: среда={wed:.3f}%, остальные={other:.3f}%, разница={wed - other:.3f}")
+            print(f"  {label}: Wednesday={wed:.3f}%, other days={other:.3f}%, diff={wed - other:.3f}")
         print()

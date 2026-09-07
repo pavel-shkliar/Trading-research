@@ -1,19 +1,18 @@
 """
-H8: календарные эффекты - день недели и "внутридневная" (open->close)
-vs "ночная" (вчерашний close -> сегодняшний open) доходность.
+H8: calendar effects - day of week, and intraday (open->close) vs
+overnight (yesterday's close -> today's open) returns.
 
-Совсем другое измерение, чем всё предыдущее (не деривативы, а время) -
-проверка, есть ли системная разница по дням недели. Крипта торгуется
-24/7, но объёмы/участники могут отличаться по дням (меньше институционных
-трейдеров в выходные).
+A different dimension entirely from everything before it (time, not
+derivatives) - checking for a systematic day-of-week difference. Crypto
+trades 24/7, but volume and participants can still differ by day (fewer
+institutional traders on weekends).
 
-- "Внутридневная" доходность = (close - open) / open за ТОТ ЖЕ день
-- "Ночная" доходность = (open сегодня - close вчера) / close вчера
+- Intraday return = (close - open) / open on the SAME day
+- Overnight return = (today's open - yesterday's close) / yesterday's close
 
-Считаем среднюю доходность каждого типа отдельно по каждому дню недели,
-на полной истории BTC и ETH.
+Averages each type by day of week, over the full BTC and ETH history.
 
-Запуск:
+Usage:
     python backtest_h8_calendar.py
 """
 
@@ -22,7 +21,7 @@ import pandas as pd
 from db import read_df
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT"]
-WEEKDAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
+WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
 def load_data(symbol: str) -> pd.DataFrame:
@@ -39,7 +38,7 @@ if __name__ == "__main__":
 
     for symbol in SYMBOLS:
         df = load_data(symbol)
-        df["weekday"] = df["date"].dt.weekday  # 0=Понедельник
+        df["weekday"] = df["date"].dt.weekday  # 0 = Monday
         df["intraday_return"] = (df["close"] - df["open"]) / df["open"] * 100
         df["overnight_return"] = (df["open"] - df["close"].shift(1)) / df["close"].shift(1) * 100
 

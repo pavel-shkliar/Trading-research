@@ -1,12 +1,11 @@
 """
-Проверка H6b на ETH - единственной другой монете, для которой Deribit
-вообще публикует DVOL (кроме BTC). Не полноценный walk-forward по всем
-периодам (мало данных на одну монету), а быстрая проверка: держится ли
-направление и порядок величины эффекта на втором активе.
+Checks H6b on ETH - the only other asset Deribit publishes DVOL for.
+Not a full walk-forward (too little data for one coin alone), just a
+quick check that the direction and rough magnitude hold on a second asset.
 
-Горизонт 60 дней - тот же, где H6b показала лучший результат на BTC.
+Horizon: 60 days, where H6b performed best on BTC.
 
-Запуск:
+Usage:
     python backtest_h6b_eth_check.py
 """
 
@@ -49,13 +48,13 @@ def check(symbol: str):
     edge = mean - baseline_mean
 
     if n < 5:
-        print(f"{symbol}: n={n} эпизодов - слишком мало для теста значимости")
+        print(f"{symbol}: n={n} episodes - too few for a significance test")
         return
 
     t_stat, p_ttest = stats.ttest_ind(episode_returns, baseline_returns, equal_var=False)
     u_stat, p_mw = stats.mannwhitneyu(episode_returns, baseline_returns, alternative="less")
 
-    print(f"{symbol}: n={n}, сигнал={mean:.2f}%, база={baseline_mean:.2f}%, эдж={edge:.2f}")
+    print(f"{symbol}: n={n}, signal={mean:.2f}%, baseline={baseline_mean:.2f}%, edge={edge:.2f}")
     print(f"  t-test p={p_ttest:.4f}, Mann-Whitney p={p_mw:.4f}")
 
 
