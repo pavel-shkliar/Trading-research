@@ -9,7 +9,8 @@ DVOL существует только с 2021-03-24 (+90 дней на перц
 уже решали похожим образом).
 
 Горизонты 30/60/90 - там, где разведочный прогон показал наиболее
-согласованный эффект.
+согласованный эффект. Прогоняем для BTC и ETH одновременно - DVOL
+у Deribit есть только для этих двух монет, дальше расширять некуда.
 
 Запуск:
     python backtest_h6b_walkforward.py
@@ -20,7 +21,7 @@ import pandas as pd
 from db import read_df
 from walkforward_common import run_walkforward
 
-SYMBOL = "BTCUSDT"
+SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 DVOL_LOW = 0.05
 HORIZONS = [30, 60, 90]
 
@@ -41,19 +42,27 @@ def load_data(symbol: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    df = load_data(SYMBOL)
-
-    # Оставляем только дни, где DVOL вообще существует - иначе база
-    # в ранних периодах (до 2021) включала бы дни без DVOL, что нечестно
-    # сравнивать с сигнальными днями (у которых DVOL по определению есть).
-    df = df[df["dvol_percentile_90d"].notna()].reset_index(drop=True)
-
-    dvol_low = df["dvol_percentile_90d"] < DVOL_LOW
-
-    result = run_walkforward(SYMBOL, dvol_low, HORIZONS, df)
-
     pd.set_option("display.float_format", lambda x: f"{x:.2f}")
     pd.set_option("display.width", 200)
     pd.set_option("display.max_columns", None)
-    print(result.to_string(index=False))
-    result.to_csv("h6b_walkforward_result.csv", index=False)
+
+    all_results = []
+    for symbol in SYMBOLS:
+        df = load_data(symbol)
+
+        # Оставляем только дни, где DVOL вообще существует - иначе база
+        # в ранних периодах (до 2021) включала бы дни без DVOL, что нечестно
+        # сравнивать с сигнальными днями (у которых DVOL по определению есть).
+        df = df[df["dvol_percentile_90d"].notna()].reset_index(drop=True)
+
+        dvol_low = df["dvol_percentile_90d"] < DVOL_LOW
+        result = run_walkforward(symbol, dvol_low, HORIZONS, df)
+        result.insert(0, "symbol", symbol)
+
+        print(f"=== {symbol} ===")
+        print(result.to_string(index=False))
+        print()
+        all_results.append(result)
+
+    combined = pd.concat(all_results, ignore_index=True)
+    combined.to_csv("h6b_walkforward_result.csv", index=False)
