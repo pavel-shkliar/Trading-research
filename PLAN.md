@@ -1,136 +1,142 @@
-# Проект: Аналитический агент для фьючерсного рынка
+# Project: Analytical Agent for the Futures Market
 
-## Контекст и цели
+## Context and goals
 
-Это учебный pet-проект. Основная цель — научиться программировать, работать
-с данными и агентами. Торговля / поиск рыночных закономерностей — предметная
-область для практики, а не цель заработать. Итоговая цель — собрать проект
-в портфолио на GitHub + пост на LinkedIn, чтобы показать навыки работы
-с данными, автоматизацией и AI-агентами.
+This is a learning pet project. The main goal is to build real
+programming, data, and agent-building skills. Trading / finding market
+patterns is the subject area for practice, not a goal to make money. The
+end goal is to package the project into a GitHub portfolio piece + a
+LinkedIn post, showcasing data engineering, automation, and AI-agent skills.
 
-Автор — новичок в программировании. Просьба к Claude Code: объяснять код,
-комментировать нетривиальные места, не считать, что автор понимает термины
-по умолчанию.
+## System idea
 
-## Идея системы
+The system looks for patterns in futures and options market data (open
+interest, funding rate, long/short ratio, liquidations, options-market
+metrics as a risk indicator), tests hypotheses against historical data,
+and measures how often and how strongly they held up. The focus is
+deliberately NOT classic indicators (RSI, MACD, etc. - well known and
+therefore of limited value on their own), but derivatives-specific
+mechanics: moments where an overheated crowd position (long or short)
+builds up, and a reversal/squeeze has historically followed.
 
-Система ищет закономерности в данных по фьючерсам и опционам (open interest,
-funding rate, long/short ratio, ликвидации, метрики опционного рынка как
-индикатор риска), тестирует гипотезы на исторических данных и оценивает,
-насколько часто и насколько сильно они срабатывали. Особый фокус —
-не классические индикаторы (RSI, MACD и т.п., которые общеизвестны и потому
-малополезны сами по себе), а специфика деривативов: моменты, когда
-скапливается перегретая позиция толпы (лонг или шорт) и исторически
-происходил разворот/сквиз.
+Known indicators (RSI, etc.) aren't off-limits - they're computed too,
+just without expecting an edge from them alone (too well-known, likely
+already arbitraged away). The value is more likely in combinations
+(e.g., an RSI extreme coinciding with a funding-rate extreme) and in
+derivatives metrics that are less commonly used systematically.
 
-Известные индикаторы (RSI и т.п.) не запрещены — их тоже считаем, но не ждём
-эджа от них самих по себе (это общеизвестно и вероятно уже "съедено" рынком).
-Ценность скорее в комбинациях (например: RSI-экстремум одновременно
-с funding-экстремумом) и в деривативных метриках, которые реже используются
-системно.
+## Methodology for finding and validating patterns
 
-## Методология поиска и проверки закономерностей
+- **Self-calibrated thresholds, not textbook ones.** We don't take
+  "RSI > 70 = overbought" as given - textbook norms were calibrated on
+  other markets and are widely known (if they ever worked, the effect
+  is likely arbitraged away). Instead, thresholds are computed from our
+  own data (e.g., "funding rate above the 95th percentile of ITS OWN history").
+- **Walk-forward validation instead of a single in-sample/out-of-sample
+  split.** Reason: crypto has multi-year cycles (bull/bear regimes), and
+  a single fixed split risks catching a pattern specific to one regime.
+  Instead: take a window (e.g. 12 months) -> search/calibrate the
+  hypothesis -> freeze the parameters -> test on the next
+  non-overlapping chunk (e.g. 3 months) -> slide the window forward ->
+  repeat. This produces a series of independent checks across different
+  parts of history instead of one.
+- **Normalized metrics instead of absolute thresholds** - so
+  observations from different coins (BTC, ETH, ...) can later be
+  pooled into one statistic and the sample size grown, instead of
+  treating each coin in complete isolation. If a pattern holds across
+  several assets at once, that's an extra check that it isn't noise
+  from one thin market.
+- **Code parameterized by symbol from the start** - currently working
+  with BTCUSDT only (to debug the whole pipeline on one asset), but
+  functions don't hardcode the symbol, so adding other coins later is trivial.
+- On news/fundamental events (FOMC, CPI, etc.) - deliberately NOT
+  modeled automatically in v1 (a separate NLP project). Practice: flag
+  known event dates and manually check "failed" signals against them
+  during backtest review. Automating this is a candidate for step 8
+  (an agent that reads the news itself).
 
-- **Пороги — свои, а не учебниковые**. Не берём "RSI > 70 = перекупленность"
-  как готовую истину — учебниковые нормативы калибровались на других рынках
-  и давно всем известны (если и работали — эффект арбитражирован). Вместо
-  этого сами вычисляем пороги на наших данных (например: "funding rate выше
-  95-го перцентиля СВОЕЙ ЖЕ истории").
-- **Walk-forward валидация вместо одного разреза на in-sample/out-of-sample**.
-  Причина: в крипте многолетние циклы (бычьи/медвежьи режимы), один
-  фиксированный разрез рискует поймать закономерность, специфичную для
-  одного режима. Вместо этого: берём окно (напр. 12 мес) → ищем/калибруем
-  гипотезу → замораживаем параметры → проверяем на следующем непересекающемся
-  куске (напр. 3 мес) → сдвигаем окно вперёд → повторяем. Так получаем серию
-  независимых проверок на разных участках истории вместо одной.
-- **Нормализация метрик вместо абсолютных порогов** — чтобы позже можно было
-  объединять наблюдения с разных монет (BTC, ETH, ...) в одну статистику
-  и увеличивать выборку, вместо того чтобы считать каждую монету полностью
-  изолированно с нуля. Если закономерность подтверждается на нескольких
-  активах одновременно — это дополнительная проверка, что это не шум одного
-  тонкого рынка.
-- **Код с самого начала параметризован по symbol** — сейчас работаем только
-  с BTCUSDT (чтобы отладить весь конвейер на одном активе), но функции не
-  хардкодят символ, чтобы позже добавить другие монеты было тривиально.
-- Про новости/фундаментальные события (FOMC, CPI и т.п.) — сознательно НЕ
-  моделируем автоматически в v1 (это отдельный NLP-проект). Практика:
-  помечать известные даты событий и вручную проверять на них "провалившиеся"
-  сигналы при разборе бэктеста. Автоматизация этого — кандидат для шага 8
-  (агент, который сам читает новости).
-
-## Источники данных
+## Data sources
 
 - **Binance Futures API**:
-  - Свечи (OHLCV) — полная история с запуска контракта
-  - Funding rate — полная история
-  - Open Interest, Top Trader Long/Short Ratio (Positions, по объёму/деньгам,
-    НЕ по количеству аккаунтов), Taker Buy/Sell Volume — **ограничение
-    Binance: эти три эндпоинта отдают историю максимум за ~30 дней**,
-    независимо от параметров запроса. Готовой длинной истории тут нет —
-    качаем что доступно сейчас и дальше копим свою историю постоянным
-    сбором (см. шаг 7 — автоматизация)
-  - Ликвидации — истории через REST нет вообще. План: собственный сбор
-    вперёд через websocket-стрим `!forceOrder@arr` (бесплатно, в реальном
-    времени). На истории — обходимся proxy-сигналом (резкий провал OI +
-    всплеск объёма)
-- **Deribit API** — опционные метрики, как готовые агрегированные
-  показатели, НЕ строим свою модель ценообразования опционов (сознательно,
-  слишком сложно для целей проекта):
-  - DVOL (индекс подразумеваемой волатильности) — хорошая история доступна,
-    делаем в первую очередь
-  - Put/Call ratio, 25-delta skew — сложнее получить одним запросом
-    (нужна агрегация по цепочке опционов), отложено на потом
-- (Позже, опционально) on-chain данные — Glassnode/Arkham/аналоги
+  - Candles (OHLCV) - full history since contract launch
+  - Funding rate - full history
+  - Open Interest, Top Trader Long/Short Ratio (Positions, by
+    volume/notional, NOT by account count), Taker Buy/Sell Volume -
+    **Binance limitation: these three endpoints only return roughly the
+    last 30 days of history**, regardless of the requested parameters.
+    No ready-made long history exists here - we fetch what's available
+    now and accumulate our own history going forward (see step 7 -
+    automation)
+  - Liquidations - no REST history at all. Plan: collect our own going
+    forward via the `!forceOrder@arr` websocket stream (free, real-time).
+    For historical data - use a proxy signal (a sharp OI drop + volume spike)
+- **Deribit API** - options metrics, used as ready-made aggregated
+  indicators, NOT building our own options pricing model (deliberate -
+  too complex for the project's goals):
+  - DVOL (implied volatility index) - good history available, prioritized
+  - Put/Call ratio, 25-delta skew - harder to get in one request (needs
+    aggregation across the option chain), deferred
+- (Later, optional) on-chain data - Glassnode/Arkham/similar
 
-## Хранилище — Postgres (не SQLite)
+## Storage - Postgres (not SQLite)
 
-Решили сразу использовать Postgres вместо SQLite из плана изначального:
-больше пригождается как навык для портфолио, легче потом перенести на VPS
-(тот же Docker-образ), лучше готов к параллельной записи (агентный слой,
-шаг 8). Поднят локально в Docker-контейнере (`trading-research-db`),
-данные — на диске через volume, креды — в `.env` (не в git).
+Decided to use Postgres from the start instead of the SQLite in the
+original plan: more useful as a portfolio skill, easier to move to a
+VPS later (same Docker image), better suited to concurrent writes (the
+agent layer, step 8). Running locally in a Docker container
+(`trading-research-db`), data on disk via a volume, credentials in
+`.env` (not committed).
 
-Инкрементальное обновление: перед скачиванием скрипт спрашивает у базы
-максимальную уже сохранённую дату и запрашивает у API только то, чего нет.
-Дополнительная страховка от дублей — `UNIQUE`-ограничение на (symbol, время)
-в каждой таблице + `INSERT ... ON CONFLICT DO NOTHING`.
+Incremental updates: before downloading, a script asks the database for
+the latest saved date and requests only what's missing from the API.
+Extra protection against duplicates - a `UNIQUE` constraint on
+(symbol, time) in every table + `INSERT ... ON CONFLICT DO NOTHING`.
 
-**Датасеты не коммитятся в git** — только код скриптов. Данные живут
-в Postgres (локально) — воспроизводимость через запуск скрипта, а не через
-хранение файла в репозитории.
+**Datasets are not committed to git** - only script code. Data lives in
+Postgres (locally) - reproducibility comes from running the script, not
+from a file stored in the repository.
 
-## Архитектура (9 этапов, по порядку)
+## Architecture (9 stages, in order)
 
-1. **Первое знакомство со средой** — установка и первый тестовый скрипт
-   (СДЕЛАНО)
-2. **Сбор данных** — скрипты скачивания свечей, funding rate, open interest,
-   long/short ratio, taker volume с Binance Futures + DVOL с Deribit
-   (ТЕКУЩИЙ ШАГ — идёт вместе с шагом 3, пишем сразу под Postgres)
-3. **Хранилище** — Postgres в Docker, инкрементальное обновление без
-   дублирования (ТЕКУЩИЙ ШАГ)
-4. **Индикаторы** — расчёт RSI, полос Боллинджера, VWAP (база) +
-   funding rate extremes (перцентиль), дивергенция цена/OI, признаки
-   скоплений ликвидаций (фокус проекта)
-5. **Визуализация** — графики цены + индикаторов, отметка сигналов
-6. **Бэктест** — walk-forward проверка гипотез на истории + статистика
-   (частота срабатывания, средний результат, доверительный интервал)
-7. **Автоматизация** — планировщик (cron) для непрерывного сбора данных
-   (особенно OI/ratio/ликвидации, где история короткая и копится только
-   вперёд), затем перенос на VPS (недорогой: DigitalOcean/Hetzner/Linode,
-   $5-10/мес) для работы 24/7
-8. **AI-агентный слой** — через Claude API/Agent SDK: агент, который сам
-   формулирует новые гипотезы на основе прошлых результатов, пишет код
-   для их проверки, запускает и анализирует результат — самая
-   "агентная" и интересная для портфолио часть. Кандидат для расширения:
-   агент сам классифицирует новостные/событийные дни
-9. **Упаковка в портфолио** — README с архитектурной схемой на GitHub,
-   примеры находок (в т.ч. отрицательные результаты — это нормально),
-   пост на LinkedIn
+1. **First contact with the environment** - setup and a first test
+   script (DONE)
+2. **Data collection** - scripts to download candles, funding rate,
+   open interest, long/short ratio, taker volume from Binance Futures +
+   DVOL from Deribit
+3. **Storage** - Postgres in Docker, incremental updates without duplicates
+4. **Indicators** - RSI, Bollinger Bands, VWAP (baseline) + funding rate
+   extremes (percentile), price/OI divergence, signs of liquidation
+   clusters (the project's focus)
+5. **Visualization** - price + indicator charts, signal markers
+6. **Backtest** - walk-forward hypothesis testing against history +
+   statistics (hit frequency, average result, confidence interval)
+7. **Automation** - a scheduler (cron) for continuous data collection
+   (especially OI/ratio/liquidations, where history is short and only
+   accumulates going forward), then migration to a VPS (a cheap one:
+   DigitalOcean/Hetzner/Linode, $5-10/mo) to run 24/7
+8. **AI agent layer** - via the Claude API/Agent SDK: an agent that
+   formulates new hypotheses from past results, writes code to test
+   them, runs it, and analyzes the outcome - the most "agentic" and
+   portfolio-interesting part. Candidate for extension: the agent
+   classifies news/event days itself
+9. **Portfolio packaging** - a README with an architecture diagram on
+   GitHub, example findings (including negative results - that's fine
+   too), a LinkedIn post
 
-## Договорённости / принципы на всём пути
+## Agreements / principles throughout
 
-- Каждый этап должен заканчиваться чем-то рабочим и проверяемым
-- Коммитить в Git после каждого рабочего шага (только код, не датасеты)
-- Не бояться просить объяснить код построчно
-- Честно фиксировать отрицательные результаты гипотез — это тоже ценность
-- Перед скачиванием полного периода — сначала тест на короткой выборке
+- Every step should end with something working and verifiable
+- Commit to Git after every working step (code only, not datasets)
+- Don't be afraid to ask for line-by-line code explanations
+- Honestly record negative hypothesis results - that's valuable too
+- Test on a short sample before downloading the full period
+
+## Status (as of 2026-09-07)
+
+Steps 1-6 are done for BTC and, for the funding-rate-based hypothesis,
+across a 20-coin universe. 16 hypotheses have been tested; see
+[HYPOTHESES.md](HYPOTHESES.md) for the full log. The project's leading
+finding is H6b (DVOL complacency -> sustained underperformance,
+confirmed on both BTC and ETH). Steps 7-9 (continuous automation beyond
+the current daily task, the AI agent layer, and portfolio packaging) are
+in progress or upcoming.

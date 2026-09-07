@@ -1,796 +1,792 @@
-# Лог гипотез
+# Hypothesis Log
 
-Каждая гипотеза, которую тестируем — сюда, с результатом (в т.ч.
-отрицательным — см. PLAN.md, договорённость честно фиксировать провалы).
-Перед тем как предлагать новую идею — сверяемся с этим списком, чтобы не
-проверять одно и то же дважды.
+Every hypothesis tested goes here, with its result (including negative
+ones - see PLAN.md's commitment to honestly recording failures). Check
+this list before proposing a new idea, to avoid re-testing the same
+thing twice.
 
-Статусы: `proposed` (сформулирована, ещё не проверена) → `testing` →
-`confirmed` / `rejected` / `inconclusive` (данных недостаточно для вывода).
+Statuses: `proposed` (formulated, not yet tested) -> `testing` ->
+`confirmed` / `rejected` / `inconclusive` (not enough data for a verdict).
 
-## Чек-лист перед тем, как записать результат новой гипотезы
+## Checklist before recording a new hypothesis's result
 
-(добавлено 2026-09-07 после того, как поймали пробел с in-sample/out-of-sample
-— план сам по себе не гарантирует, что ему следуют, нужен явный чек-лист)
+(added 2026-09-07 after catching an in-sample/out-of-sample gap - a
+written plan doesn't enforce itself, hence an explicit checklist)
 
-- [ ] n — независимые эпизоды (через `collapse_to_episodes`), не сырые
-      пересекающиеся дни
-- [ ] Walk-forward по всем 6 периодам (не один разрез) — основной критерий
-      устойчивости, раз строгий out-of-sample решили не делать блокирующим
-      требованием (см. заметку ниже)
-- [ ] (необязательно, раз в месяц-два) перепроверить ранее замороженные
-      гипотезы на свежих данных из автосбора — не блокирует новые тесты
-- [ ] Показаны абсолютные числа (доходность, частота), а не только "эдж"
-- [ ] Обновлён счётчик протестированных гипотез в заметке про
-      множественные сравнения ниже
-- [ ] Если горизонт = 30 дней — отдельная осторожность, три предыдущих
-      гипотезы вели себя там нестабильно
+- [ ] n = independent episodes (via `collapse_to_episodes`), not raw
+      overlapping days
+- [ ] Walk-forward across all 6 periods (not a single split) - the
+      primary robustness bar now that strict out-of-sample was made
+      non-blocking (see the note below)
+- [ ] (optional, every month or two) re-check previously frozen
+      hypotheses against fresh data from the auto-collector - doesn't
+      block new tests
+- [ ] Absolute numbers shown (return, frequency), not just "the edge"
+- [ ] Hypothesis counter updated in the multiple-comparisons note below
+- [ ] Extra caution if horizon = 30 days - three prior hypotheses were
+      unstable there
 
-## H14 — Низкая РЕАЛИЗОВАННАЯ волатильность → недоперформанс (аналог H6b на 20 монетах)
+## H14 - Low REALIZED volatility -> underperformance (H6b analog across 20 coins)
 
-**Статус**: inconclusive — впечатляющий пул НЕ пережил walk-forward по
-годам, эффект концентрирован в 2021-2022 (2026-09-07)
+**Status**: inconclusive - the impressive pool did NOT survive
+year-by-year walk-forward, the effect is concentrated in 2021-2022 (2026-09-07)
 
-**Формулировка**: та же механика, что H6b (самодовольство →
-недоперформанс), но через РЕАЛИЗОВАННУЮ волатильность цены (скользящее
-std дневной доходности за 90 дней), а не подразумеваемую DVOL — доступно
-для ВСЕХ 20 монет универсума, не только BTC/ETH.
+**Formulation**: the same mechanism as H6b (complacency ->
+underperformance), but via REALIZED price volatility (rolling 90-day std
+of daily returns) instead of implied DVOL - available for all 20
+universe coins, not just BTC/ETH.
 
-**Разведочный результат по 20 монетам (горизонт 60 дней)** — выглядел
-превосходно: 17 из 20 монет с отрицательным эджем, объединённый пул
-848 эпизодов дал среднюю избыточную доходность **−10.12%**, 95% ДИ
-[−14.44%, −5.80%], **t-test p=0.0000**.
+**Exploratory result across 20 coins (60-day horizon)** looked
+excellent: 17 of 20 coins with a negative edge, a pooled sample of 848
+episodes gave a mean excess return of **-10.12%**, 95% CI
+[-14.44%, -5.80%], **t-test p=0.0000**.
 
-**Walk-forward по годам (объединённый пул) разрушил первое впечатление**:
+**Year-by-year walk-forward (pooled) shattered the first impression**:
 
-| Период | n | Средняя изб. доходность | p-value |
+| Period | n | Mean excess return | p-value |
 |---|---|---|---|
-| 2019-2020 | 33 | +48.92% (противоречит) | 0.0347 |
-| 2021 | 141 | −46.19% | 0.0000 |
-| 2022 (крах Luna/FTX) | 119 | −14.58% | 0.0000 |
-| 2023 | 133 | +9.31% (противоречит) | 0.0528 |
-| 2024 | 128 | −2.95% (не значимо) | 0.5388 |
-| 2025-2026 | 294 | +1.17% (не значимо) | 0.6928 |
+| 2019-2020 | 33 | +48.92% (contradicts) | 0.0347 |
+| 2021 | 141 | -46.19% | 0.0000 |
+| 2022 (Luna/FTX collapse) | 119 | -14.58% | 0.0000 |
+| 2023 | 133 | +9.31% (contradicts) | 0.0528 |
+| 2024 | 128 | -2.95% (not significant) | 0.5388 |
+| 2025-2026 | 294 | +1.17% (not significant) | 0.6928 |
 
-**Вывод**: эффект почти целиком объясняется двумя конкретными бурными
-годами (2021, 2022 — самые волатильные в нашей истории), а НЕ устойчивой
-закономерностью. В обоих последних периодах (2024, 2025-2026 — свыше 400
-эпизодов) эффекта нет вообще. Впечатляющий общий p-value (0.0000) —
-классический пример того, как объединение данных без разбивки по времени
-маскирует регим-зависимость. Не подтверждаем как рабочую находку —
-но ценный пример того, зачем нужен весь walk-forward-процесс: без него
-эта гипотеза выглядела бы как лучший результат проекта.
-
----
-
-## H13 — Экстремальный базис (фьючерс/спот) → схлопывание разрыва
-
-**Статус**: rejected (2026-09-07)
-
-**Формулировка**: базис = (цена фьючерса − цена спота)/спот. В теории
-арбитраж должен держать разрыв маленьким — экстремально высокий базис
-(фьючерс дорогой) → ждём недоперформанса фьючерса впоследствии. Скачали
-отдельно спотовые свечи (`download_spot_candles.py`, таблица
-`spot_candles`) — раньше такого не делали.
-
-**Результат** (горизонт 60 дней): BTC эдж −1.71 (p=0.56), ETH эдж +6.22
-(p=0.11) — оба не значимы, и знаки у BTC/ETH ПРОТИВОПОЛОЖНЫ друг другу.
-Walk-forward тоже несогласован по годам.
-
-**Вывод**: эффекта нет. Правдоподобное объяснение — базис на перпетуалах
-и так постоянно "подрезается" funding rate (выплаты каждые 8 часов) —
-разрыв не успевает накопиться в самостоятельный многодневный сигнал
-сверх того, что уже покрыто через сам funding rate (H1/H1b/H1c).
-Отклонена.
+**Conclusion**: the effect is almost entirely explained by two specific
+turbulent years (2021, 2022 - the most volatile in our history), not a
+persistent pattern. In both of the most recent periods (2024, 2025-2026
+- 400+ episodes) there is no effect at all. The impressive overall
+p-value (0.0000) is a textbook case of pooling data without a time
+breakdown masking regime-dependence. Not confirmed as a working finding
+- but a valuable illustration of why the full walk-forward process
+exists: without it, this hypothesis would have looked like the best
+result of the project.
 
 ---
 
-## H12 — Экстремум ETH/BTC ratio → разворот относительной силы
+## H13 - Extreme futures/spot basis -> gap convergence
 
-**Статус**: inconclusive — впечатляющий сырой результат НЕ пережил
-эпизоды/walk-forward (2026-09-07)
+**Status**: rejected (2026-09-07)
 
-**Формулировка**: свежий угол — межактивная ротация, не деривативы и не
-время. Экстремальный "альт-сезон" (ETH/BTC ratio percentile>0.95) → ждём
-последующего опережения BTC над ETH (разворот относительной силы).
-Обратная сторона (BTC-доминирование → опережение ETH) в разведке не
-подтвердилась (p=0.89), тестировали только рабочую половину.
+**Formulation**: basis = (futures price - spot price)/spot. In theory,
+arbitrage should keep the gap small - extreme high basis (expensive
+futures) -> expect futures underperformance afterward. Downloaded spot
+candles separately for this (`download_spot_candles.py`, `spot_candles`
+table) - not done before.
 
-**На сырых днях выглядело сильно**: n=181, p=0.0001.
+**Result** (60-day horizon): BTC edge -1.71 (p=0.56), ETH edge +6.22
+(p=0.11) - both not significant, and the BTC/ETH signs are OPPOSITE.
+Walk-forward is also inconsistent by year.
 
-**После схлопывания в независимые эпизоды**: n рухнул до **35**
-(181 сырых дней — это было ~5 дней на эпизод в среднем, автокорреляция
-очень сильная). t-test p=0.31 — НЕ значимо. Mann-Whitney p=0.055 — на
-грани, тоже не проходит порог.
-
-**Walk-forward**: 4 из 5 периодов с данными подтверждают направление, но
-самый свежий период (2025-2026) даёт **разворот** (+10.37 вместо
-ожидаемого минуса, n=9).
-
-**Вывод**: хороший урок методологии, а не находка — необработанный
-p-value был драматически завышен автокорреляцией (181 → 35 при
-схлопывании), именно то, от чего защищает наша процедура. Не логируем
-как рабочую гипотезу, но ценно как демонстрация того, зачем нужна вся
-цепочка проверок.
+**Conclusion**: no effect. A plausible explanation - the basis on
+perpetuals is already continuously trimmed by funding rate (paid every
+8 hours) - the gap doesn't have time to build into an independent
+multi-day signal beyond what funding rate itself already covers
+(H1/H1b/H1c). Rejected.
 
 ---
 
-## H11 — Высокий/низкий объём торгов → доходность следующего дня
+## H12 - ETH/BTC ratio extreme -> reversal of relative strength
 
-**Статус**: rejected (2026-09-07)
+**Status**: inconclusive - the impressive raw result did NOT survive
+episode collapsing/walk-forward (2026-09-07)
 
-**Формулировка**: независимо от дня недели — предсказывает ли сам объём
-(верхний/нижний дециль относительно скользящих 90 дней) доходность
-следующего дня?
+**Formulation**: a fresh angle - cross-asset rotation, not derivatives
+or calendar. Extreme "alt season" (ETH/BTC ratio percentile > 0.95) ->
+expect BTC to subsequently outperform ETH (reversal of relative
+strength). The other side (BTC dominance -> ETH catches up) did not
+hold up in the exploratory pass (p=0.89); only the working half was tested.
 
-**Результат**: BTC p=0.4810, ETH p=0.1742 — оба не значимы. Walk-forward
-по годам показывает разнонаправленные знаки, включая явный разворот
-у обоих активов в 2025-2026 (BTC −0.461, ETH −0.685 при том, что в
-предыдущих периодах знак был в основном положительным).
+**Looked strong on raw days**: n=181, p=0.0001.
 
-**Вывод**: эффекта нет. Отклонена.
+**After collapsing into independent episodes**: n dropped to **35**
+(181 raw days averaged ~5 days per episode - very strong
+autocorrelation). t-test p=0.31 - NOT significant. Mann-Whitney p=0.055
+- borderline, also fails the threshold.
+
+**Walk-forward**: 4 of 5 periods with data confirm the direction, but
+the most recent period (2025-2026) **reverses** (+10.37 instead of the
+expected negative, n=9).
+
+**Conclusion**: a good methodology lesson, not a finding - the raw
+p-value was dramatically inflated by autocorrelation (181 -> 35 upon
+collapsing), exactly what this project's procedure exists to catch. Not
+logged as a working hypothesis, but valuable as a demonstration of why
+the full validation chain matters.
 
 ---
 
-## H10 — DVOL-самодовольство: после ралли vs без ралли (уточнение H6b)
+## H11 - High/low trading volume -> next-day return
 
-**Статус**: confirmed как уточнение — обе подгруппы подтверждают H6b,
-"без ралли" сильнее (2026-09-07)
+**Status**: rejected (2026-09-07)
 
-**Формулировка**: среди дней H6b (DVOL низкий), отличается ли эффект
-в зависимости от того, было ли этому ПРЕДШЕСТВОВАНО ралли (90-дневная
-доходность положительна) или нет?
+**Formulation**: independent of day of week - does volume itself (top/
+bottom decile relative to a rolling 90 days) predict the next day's return?
 
-**Результат** (горизонт 60 дней):
+**Result**: BTC p=0.4810, ETH p=0.1742 - both not significant.
+Year-by-year walk-forward shows inconsistent signs, including a clear
+reversal on both assets in 2025-2026 (BTC -0.461, ETH -0.685, while
+prior periods were mostly positive).
 
-| Монета | После ралли (n) | Эдж | Без ралли (n) | Эдж |
+**Conclusion**: no effect. Rejected.
+
+---
+
+## H10 - DVOL complacency: after a rally vs without one (refines H6b)
+
+**Status**: confirmed as a refinement - both subgroups confirm H6b,
+"without a rally" is stronger (2026-09-07)
+
+**Formulation**: among H6b's signal days (DVOL low), does the effect
+differ depending on whether it was PRECEDED by a rally (positive 90-day
+return) or not?
+
+**Result** (60-day horizon):
+
+| Coin | After rally (n) | Edge | Without rally (n) | Edge |
 |---|---|---|---|---|
-| BTC | 55 | −8.25 | 47 | **−10.43** |
-| ETH | 47 | −5.27 | 34 | **−20.41** |
+| BTC | 55 | -8.25 | 47 | **-10.43** |
+| ETH | 47 | -5.27 | 34 | **-20.41** |
 
-**Вывод**: обе подгруппы подтверждают направление H6b (обе отрицательные),
-но "самодовольство БЕЗ предшествующего ралли" — заметно более сильный
-сигнал, особенно на ETH (−20.41 против −5.27). Правдоподобное объяснение:
-спокойствие после ралли — частично нормальная реакция (люди довольны
-прибылью), а спокойствие БЕЗ ралли — более необычное, реальный признак
-недооценки риска. Уточняет H6b, не противоречит.
+**Conclusion**: both subgroups confirm H6b's direction (both negative),
+but "complacency WITHOUT a preceding rally" is a meaningfully stronger
+signal, especially on ETH (-20.41 vs -5.27). Plausible explanation:
+calm after a rally is partly a normal reaction (people are content with
+their gains), while calm WITHOUT a rally is more unusual - a genuine
+sign of risk underpricing. Refines H6b, doesn't contradict it.
 
 ---
 
-## H8 — Календарные эффекты (день недели)
+## H8 - Calendar effects (day of week)
 
-**Статус**: интересная находка, но БЕЗ причинного объяснения — держим
-с осторожностью (2026-09-07)
+**Status**: interesting finding, but WITHOUT a causal explanation -
+held with caution (2026-09-07)
 
-**Формулировка**: не деривативы, а время — отличается ли внутридневная
-доходность (open→close) по дням недели? Совсем другое измерение, чем
-всё предыдущее.
+**Formulation**: not derivatives, but time - does intraday return
+(open->close) differ by day of week? A completely different dimension
+from everything before it.
 
-**Результат**: "ночная" доходность (close→следующий open) структурно
-всегда ≈0 — крипта торгуется 24/7, не находка, ограничение данных.
+**Result**: "overnight" return (close -> next open) is structurally
+always ~0 - crypto trades 24/7, this is a data limitation, not a finding.
 
-Внутридневная доходность по средам заметно выше остальных дней на ОБОИХ
-активах:
+Intraday return on Wednesdays is meaningfully higher than other days on
+BOTH assets:
 
-| | Среда | Остальные дни | p-value |
+| | Wednesday | Other days | p-value |
 |---|---|---|---|
 | BTC | +0.463% | +0.078% | 0.0459 |
 | ETH | +0.665% | +0.130% | 0.0432 |
 
-Walk-forward по годам: BTC — 5 из 6 периодов положительны (2022 ≈ноль),
-ETH — **6 из 6** положительны.
+Year-by-year walk-forward: BTC - 5 of 6 periods positive (2022 ~ zero),
+ETH - **6 of 6** positive.
 
-**Важная оговорка**: это гипотеза, найденная СКАНИРОВАНИЕМ 7 дней недели
-(классическая множественная проверка — см. заметку ниже). Статистика
-устойчивая и кросс-активная, но отсутствие причинного механизма — веский
-повод для осторожности. Не строим на этом торговых решений без
-независимого подтверждения на будущих данных.
+**Important caveat**: this hypothesis was found by SCANNING all 7
+weekdays (a textbook multiple-comparisons situation - see the note
+below). The statistics are robust and cross-asset, but the lack of a
+causal mechanism is a real reason for caution. No trading decisions are
+built on this without independent confirmation on future data.
 
-**Направление сигнала (уточнение)**: положительная внутридневная
-доходность по средам значит "открыть/держать лонг на открытии среды,
-закрыть на закрытии" — то есть сигнал говорит "покупать", а не "продавать".
+**Signal direction (clarification)**: a positive Wednesday intraday
+return means "go/stay long from Wednesday's open to its close" - i.e.
+the signal says "buy," not "sell."
 
-**Проверка на выброс vs широкий эффект (2026-09-07)**: медиана (не только
-среднее) тоже заметно выше по средам (BTC 0.072% vs 0.020%, ETH 0.199%
-vs 0.091%), и без 6 самых экстремальных сред (по 3 с каждого края)
-эффект НЕ уменьшается, даже немного растёт — значит, это не пара
-выбросов, а широкий, повторяющийся паттерн.
+**Outlier vs broad-based check (2026-09-07)**: the median (not just the
+mean) is also meaningfully higher on Wednesdays (BTC 0.072% vs 0.020%,
+ETH 0.199% vs 0.091%), and trimming the 6 most extreme Wednesdays
+(3 from each tail) does NOT reduce the effect - it even grows slightly -
+meaning this isn't a couple of outliers but a broad, recurring pattern.
 
-**Проверка причины — FOMC (заседания ФРС)**: FOMC объявляется 8 раз
-в год, почти всегда по средам — логичный кандидат на причину. Но за 7
-лет у нас 365 сред (~52/год), а FOMC-среды — только 8 из 52 (~15%). Раз
-эффект широкий (держится почти на всех средах, не только на выбросах),
-FOMC физически не может быть единственной причиной — слишком маленькая
-доля сред приходится на заседания. Другие рассмотренные и отброшенные
-кандидаты: экспирация опционов Deribit (по пятницам, не средам),
-"недельная свеча" в техническом анализе (обычно от понедельника).
+**Cause investigation - FOMC (Fed meetings)**: FOMC is announced 8 times
+a year, almost always on a Wednesday - a logical candidate cause. But
+across 7 years we have 365 Wednesdays (~52/year), and FOMC Wednesdays
+are only 8 of 52 (~15%). Since the effect is broad (holding on nearly
+every Wednesday, not just outliers), FOMC physically cannot be the sole
+cause - too small a share of Wednesdays are meeting days. Other
+candidates considered and ruled out: Deribit's weekly options expiry
+(Fridays, not Wednesday), technical-analysis "weekly candle" conventions
+(usually Monday-anchored).
 
-**Окончательный вывод**: причина не найдена. Статистически устойчивый,
-широкий, кросс-активный эффект без объяснения — как исторический
-"эффект понедельника" на фондовом рынке, тоже задокументированный, но
-не до конца объяснённый десятилетиями исследований. Держим как честно
-зафиксированную, но низкоприоритетную для практического использования
-находку.
-
----
-
-## H7 — Скорость изменения funding rate (уточнение мёртвой H1b)
-
-**Статус**: rejected — не спасает H1b (2026-09-07)
-
-**Формулировка**: резкий разворот в перегруженность (не был перегружен
-14 дней назад) vs хроническое состояние (был перегружен и тогда) —
-может, скорость важнее уровня?
-
-**Результат** (горизонт 60 дней): BTC — резкий разворот эдж +4.11,
-хроника −4.04. ETH — ПРОТИВОПОЛОЖНО: резкий разворот −5.17, хроника
-+17.80.
-
-**Вывод**: направления расходятся между активами так же, как и у исходной
-H1b — скорость изменения не спасает уже отклонённую гипотезу. Не
-углубляемся дальше.
+**Final conclusion**: no cause found. A statistically robust, broad,
+cross-asset effect with no explanation - comparable to the historically
+documented "Monday effect" in equities, also well-documented but not
+fully explained after decades of research. Logged honestly as a real
+but low-priority-for-practical-use finding.
 
 ---
 
-## H2 — RSI-экстремум сам по себе → откат
+## H7 - Funding rate velocity (refinement of the already-dead H1b)
 
-**Статус**: rejected — работает ПРОТИВОПОЛОЖНО учебнику (2026-09-07)
+**Status**: rejected - doesn't rescue H1b (2026-09-07)
 
-**Формулировка**: классический контроль. RSI<30 (перепродано) → ждём
-роста, RSI>70 (перекуплено) → ждём падения. Учебниковый порог 30/70, не
-свой перцентиль — цель именно проверить общеизвестный индикатор как есть.
+**Formulation**: a sudden flip into crowded positioning (not crowded 14
+days ago) vs a chronic state (crowded 14 days ago too) - does speed
+matter more than level?
 
-**Результат** (`backtest_h2_rsi.py`, эпизоды, все 7 горизонтов):
+**Result** (60-day horizon): BTC - sudden flip edge +4.11, chronic
+-4.04. ETH - the OPPOSITE: sudden flip -5.17, chronic +17.80.
 
-| Горизонт | RSI>70 (ждём падения) Δ | RSI<30 (ждём роста) Δ |
+**Conclusion**: directions disagree between assets in the same way as
+the underlying H1b - velocity doesn't rescue an already-rejected
+hypothesis. Not pursued further.
+
+---
+
+## H2 - RSI extreme alone -> reversal
+
+**Status**: rejected - works the OPPOSITE of the textbook assumption (2026-09-07)
+
+**Formulation**: a classic control. RSI<30 (oversold) -> expect a rally,
+RSI>70 (overbought) -> expect a drop. Standard textbook threshold 30/70,
+not our own percentile - the goal here is specifically to test the
+well-known indicator as-is.
+
+**Result** (`backtest_h2_rsi.py`, episodes, all 7 horizons):
+
+| Horizon | RSI>70 (expect drop) Delta | RSI<30 (expect rally) Delta |
 |---|---|---|
-| 30 дней | +2.25 | −0.33 |
-| 60 дней | +0.58 | −1.71 |
-| 90 дней | +7.39 | −4.74 |
-| 180 дней | +3.87 | −16.54 |
+| 30 days | +2.25 | -0.33 |
+| 60 days | +0.58 | -1.71 |
+| 90 days | +7.39 | -4.74 |
+| 180 days | +3.87 | -16.54 |
 
-**Вывод**: "перекупленность" на BTC исторически предвещала ПРОДОЛЖЕНИЕ
-роста (momentum), а не разворот. "Перепроданность" на средних-длинных
-горизонтах предвещала ПРОДОЛЖЕНИЕ падения ("падающий нож"), а не отскок.
-Оба — обратный эффект от учебникового предположения. Ожидаемый и полезный
-контрольный результат: подтверждает, что метод честно находит "нет эджа
-(или обратный эдж)" там, где и предсказывал PLAN.md, а не рисует
-закономерность из всего подряд.
-
----
-
-## H4 — Полосы Боллинджера → откат к среднему
-
-**Статус**: rejected — та же momentum-картина, что у H2/RSI (2026-09-07)
-
-**Формулировка**: касание нижней полосы → ждём роста к средней, касание
-верхней → ждём падения к средней. Классический контроль.
-
-**Результат** (`backtest_h4_bollinger.py`):
-
-| Горизонт | Нижняя (ждём роста) Δ | Верхняя (ждём падения) Δ |
-|---|---|---|
-| 90 дней | −5.85 | +4.88 |
-| 180 дней | −16.63 | +8.15 |
-
-**Вывод**: тот же паттерн, что у H2 (RSI) — momentum, не mean-reversion.
-Ожидаемо, так как оба индикатора считаются из цены — хорошее перекрёстное
-подтверждение, что это не случайность одного конкретного индикатора,
-а свойство самого рынка в этот период.
+**Conclusion**: "overbought" on BTC has historically preceded CONTINUED
+gains (momentum), not a reversal. "Oversold" at medium-long horizons has
+preceded CONTINUED losses (a "falling knife"), not a bounce. Both are
+the reverse of the textbook assumption. An expected and useful control
+result: confirms the method honestly finds "no edge (or reversed edge)"
+exactly where PLAN.md predicted it would, rather than manufacturing a
+pattern out of anything.
 
 ---
 
-## H6 — DVOL-экстремум сам по себе (без привязки к funding)
+## H4 - Bollinger Bands -> reversion to the mean
 
-**Статус**: split — H6a rejected, H6b promising (walk-forward пройден на
-60 днях, лучший результат из всех гипотез — см. ниже) (2026-09-07)
+**Status**: rejected - same momentum pattern as H2/RSI (2026-09-07)
 
-**H6a: DVOL высокий (percentile>0.95) → ждём отскока вверх** (аналогия
-с VIX на traditional-рынках). Результат слабый/около нуля на всех
-горизонтах (Δ доходности от −0.55 до +4.44, без чёткого направления).
-Rejected.
+**Formulation**: lower band touch -> expect a rally to the midline,
+upper band touch -> expect a drop to the midline. Classic control.
 
-**H6b: DVOL низкий (percentile<0.05, "самодовольство") → ждём
-недоперформанса И учащения крупных падений** ("затишье перед бурей").
+**Result** (`backtest_h4_bollinger.py`):
 
-| Горизонт | Δ доходности | Δ частоты крупных падений |
+| Horizon | Lower (expect rally) Delta | Upper (expect drop) Delta |
 |---|---|---|
-| 7 дней | −2.11 | +6.70 п.п. |
-| 14 дней | −3.30 | +13.82 п.п. |
-| 30 дней | −3.37 | +9.78 п.п. |
-| 60 дней | −6.83 | +18.21 п.п. |
-| 90 дней | −6.80 | +4.97 п.п. |
+| 90 days | -5.85 | +4.88 |
+| 180 days | -16.63 | +8.15 |
 
-Доходность отрицательна на 6 из 7 горизонтов, частота крупных падений
-выше базы на 5 из 7 (особенно заметно на 7-60 днях). Первая новая
-НЕЗАВИСИМАЯ от funding rate идея с согласованной картиной по нескольким
-горизонтам сразу — кандидат на walk-forward (`backtest_h6_dvol.py`,
-данные только с 2021-06-21).
+**Conclusion**: the same pattern as H2 (RSI) - momentum, not
+mean-reversion. Expected, since both indicators are computed from price
+- a good cross-confirmation that this isn't an artifact of one specific
+indicator's formula but a property of the market itself in this period.
 
-**Walk-forward H6b (`backtest_h6b_walkforward.py`, горизонты 30/60/90,
-n — эпизоды)** — ВАЖНО про знак: гипотеза предсказывает НЕДОперформанс,
-значит отрицательный edge_mean = подтверждение, а не наоборот:
+---
 
-Горизонт 60 дней (лучший результат из всех гипотез на сегодня):
+## H6 - DVOL extremes on their own (not tied to funding)
 
-| Период | n | Δ доходности | Подтверждает? |
+**Status**: split - H6a rejected, H6b promising (walk-forward passed at
+60 days, the best result of any hypothesis so far - see below) (2026-09-07)
+
+**H6a: DVOL high (percentile>0.95) -> expect a bounce** (VIX-style
+analogy on traditional markets). Result was weak/near zero at every
+horizon (return delta from -0.55 to +4.44, no clear direction). Rejected.
+
+**H6b: DVOL low (percentile<0.05, "complacency") -> expect
+underperformance AND more frequent large drops** ("calm before the
+storm").
+
+| Horizon | Return Delta | Large-drop-frequency Delta |
+|---|---|---|
+| 7 days | -2.11 | +6.70 pp |
+| 14 days | -3.30 | +13.82 pp |
+| 30 days | -3.37 | +9.78 pp |
+| 60 days | -6.83 | +18.21 pp |
+| 90 days | -6.80 | +4.97 pp |
+
+Return is negative on 6 of 7 horizons, large-drop frequency exceeds
+baseline on 5 of 7 (especially at 7-60 days). The first new idea
+INDEPENDENT of funding rate with a consistent picture across several
+horizons at once - a candidate for walk-forward (`backtest_h6_dvol.py`,
+data only from 2021-06-21).
+
+**Walk-forward for H6b (`backtest_h6b_walkforward.py`, horizons
+30/60/90, n = episodes)** - IMPORTANT on sign: the hypothesis predicts
+UNDERperformance, so a negative edge_mean = confirmation, not the reverse:
+
+60-day horizon (the best result of any hypothesis to date):
+
+| Period | n | Return Delta | Confirms? |
 |---|---|---|---|
-| 2019-2020 | 0 | — (DVOL не существовал) | — |
-| 2021 | 6 | −26.19 | ✅ |
-| 2022 | 19 | −0.91 | ✅ (слабо) |
-| 2023 | 11 | −10.90 | ✅ |
-| 2024 | 13 | −3.97 | ✅ (слабо) |
-| 2025-2026 | 36 | −0.73 | ✅ (слабо) |
+| 2019-2020 | 0 | - (DVOL didn't exist) | - |
+| 2021 | 6 | -26.19 | Yes |
+| 2022 | 19 | -0.91 | Yes (weakly) |
+| 2023 | 11 | -10.90 | Yes |
+| 2024 | 13 | -3.97 | Yes (weakly) |
+| 2025-2026 | 36 | -0.73 | Yes (weakly) |
 
-**Все 5 доступных периодов подтверждают** — даже более согласованно, чем
-у H1b (5 из 6). На 90 днях слабее (3 из 5 явно подтверждают, 2 нейтральны/
-противоречат, включая самый свежий период). На 30 днях смешанно.
+**All 5 available periods confirm** - even more consistent than H1b (5
+of 6). Weaker at 90 days (3 of 5 clearly confirm, 2 neutral/
+contradicting, including the most recent period). Mixed at 30 days.
 
-**Статус обновлён**: H6b — самый согласованный walk-forward результат
-среди всех протестированных гипотез, горизонт 60 дней.
+**Status updated**: H6b is the most consistent walk-forward result of
+any hypothesis tested, at the 60-day horizon.
 
-**Проверка статистической значимости (2026-09-07, горизонт 60 дней,
-n=85 эпизодов)**:
-- Welch t-test (сравнение с базой): **p=0.0086** — значимо
-- Mann-Whitney U: **p=0.0017** — значимо
+**Statistical significance check (2026-09-07, 60-day horizon, n=85
+episodes)**:
+- Welch t-test (vs baseline): **p=0.0086** - significant
+- Mann-Whitney U: **p=0.0017** - significant
 
-В отличие от H1b (где t-test и Mann-Whitney расходились), здесь **оба
-теста согласны** — это более надёжный результат. 95% доверительный
-интервал самой сигнальной группы [−7.04%, +2.70%] пересекает ноль (не
-можем железно утверждать "будет убыток"), но сравнение с базой
-статистически значимо на уровне <1% по обоим тестам — сигнальная группа
-значимо хуже общего рынка.
+Unlike H1b (where the t-test and Mann-Whitney disagreed), here **both
+tests agree** - a more reliable result. The signal group's own 95% CI
+[-7.04%, +2.70%] crosses zero (can't firmly claim "guaranteed loss"),
+but the comparison against baseline is significant at the <1% level on
+both tests - the signal group is significantly worse than the general
+market.
 
-**Итоговый статус H6b**: наш самый статистически надёжный результат на
-сегодня — walk-forward (5 из 5 периодов) + оба теста значимости
-согласны. Всё ещё не "доказано" в абсолютном смысле (см. счётчик
-множественных сравнений — это уже 9-я протестированная гипотеза), но
-заметно крепче, чем H1b.
+**H6b's overall status**: our most statistically reliable result to
+date - walk-forward (5 of 5 periods) plus both significance tests agree.
+Still not "proven" in an absolute sense (see the multiple-comparisons
+counter - this is already the 9th hypothesis tested), but noticeably
+stronger than H1b.
 
-**Проверка на ETH (2026-09-07, `backtest_h6b_eth_check.py`)** — DVOL
-у Deribit есть только для BTC и ETH, дальше расширять некуда, но это
-первая гипотеза, которая реально подтвердилась на ВТОРОМ независимом
-активе:
+**Check on ETH (2026-09-07, `backtest_h6b_eth_check.py`)** - Deribit
+only publishes DVOL for BTC and ETH, nowhere further to extend, but this
+is the first hypothesis that actually held up on a SECOND independent asset:
 
-| Монета | n | Эдж | t-test | Mann-Whitney |
+| Coin | n | Edge | t-test | Mann-Whitney |
 |---|---|---|---|---|
-| BTCUSDT | 85 | −6.83 | p=0.0086 | p=0.0017 |
-| ETHUSDT | 71 | **−10.06** | p=0.0114 | p=0.0016 |
+| BTCUSDT | 85 | -6.83 | p=0.0086 | p=0.0017 |
+| ETHUSDT | 71 | **-10.06** | p=0.0114 | p=0.0016 |
 
-На ETH эффект даже сильнее, чем на BTC, оба теста снова согласны между
-собой. В отличие от H1b (не пережила проверку на 20 монетах), H6b
-проходит проверку на всех доступных активах, где вообще можно её
-протестировать. Пока лучшая, наиболее подтверждённая гипотеза проекта —
-не обобщаем на "любой актив" (данных для этого физически нет за
-пределами BTC/ETH), но и BTC-специфичным шумом это уже не выглядит.
+The effect is even stronger on ETH than BTC, and both tests agree there
+too. Unlike H1b (which failed the 20-coin test), H6b passes on every
+asset it can actually be tested on. The best, most validated hypothesis
+of the project so far - not generalized to "any asset" (there's no data
+for that beyond BTC/ETH), but no longer looking like BTC-specific noise
+either.
 
-**Walk-forward по годам для ОБОИХ активов (2026-09-07,
-`backtest_h6b_walkforward.py`, горизонты 30/60/90)**:
+**Year-by-year walk-forward for BOTH assets (2026-09-07,
+`backtest_h6b_walkforward.py`, horizons 30/60/90)**:
 
-| Горизонт | BTC подтверждающих периодов | ETH подтверждающих периодов |
+| Horizon | BTC periods confirming | ETH periods confirming |
 |---|---|---|
-| 30 дней | 4 из 5 | 4 из 5 |
-| 60 дней | **5 из 5** | **5 из 5** |
-| 90 дней | 3 из 5 | **5 из 5** |
+| 30 days | 4 of 5 | 4 of 5 |
+| 60 days | **5 of 5** | **5 of 5** |
+| 90 days | 3 of 5 | **5 of 5** |
 
-**26 из 30 комбинаций актив×период×горизонт подтверждают гипотезу
-(87%)**. На горизонте 60 дней — идеальный результат на обоих активах без
-исключений:
+**26 of 30 asset x period x horizon combinations confirm the hypothesis
+(87%)**. At the 60-day horizon - a perfect result on both assets, no
+exceptions:
 
-| Период | BTC Δ доходности (60д) | ETH Δ доходности (60д) |
+| Period | BTC Return Delta (60d) | ETH Return Delta (60d) |
 |---|---|---|
-| 2021 | −26.19 | −3.82 |
-| 2022 (крах Luna/FTX) | −0.91 | −13.26 |
-| 2023 | −10.90 | −10.53 |
-| 2024 | −3.97 | −7.20 |
-| 2025-2026 | −0.73 | −7.30 |
+| 2021 | -26.19 | -3.82 |
+| 2022 (Luna/FTX collapse) | -0.91 | -13.26 |
+| 2023 | -10.90 | -10.53 |
+| 2024 | -3.97 | -7.20 |
+| 2025-2026 | -0.73 | -7.30 |
 
-Показательно: в 2022 году BTC дал слабое подтверждение, а ETH —
-заметно более сильное. Разные активы по-разному пережили один и тот же
-кризис, но оба в итоге подтвердили закономерность — довод в пользу того,
-что это не совпадение одного актива в одном рыночном режиме.
+Telling detail: in 2022, BTC confirmed weakly while ETH confirmed
+noticeably more strongly. Different assets weathered the same crisis
+differently, yet both ultimately confirmed the pattern - an argument
+that this isn't a coincidence of one asset in one regime.
 
-**Итог**: H6b на горизонте 60 дней — самый согласованный результат за
-весь проект (walk-forward 5/5 на ДВУХ активах + оба теста значимости на
-обоих). Пределы обобщения известны и честно зафиксированы: дальше BTC/ETH
-проверить нечем (ограничение самого Deribit), но в этих границах
-результат настолько цельный, насколько это вообще возможно с нашими
-данными.
+**Summary**: H6b at the 60-day horizon is the most consistent result of
+the entire project (5/5 walk-forward on TWO assets, plus both
+significance tests passing on both). Its generalization limits are
+known and honestly stated: nothing further to test beyond BTC/ETH (a
+Deribit limitation), but within those bounds the result is as complete
+as our data can make it.
 
-**Механика (углубление, 2026-09-07, `backtest_h6b_mechanism.py`)** —
-ИСПРАВЛЕНИЕ исходной формулировки: изначально описывали H6b как "затишье
-перед бурей" (намёк на резкий обвал). Построили полную траекторию
-доходности день за днём (не только конечную точку на 60-й день) — картина
-другая:
+**Mechanism (deeper dive, 2026-09-07, `backtest_h6b_mechanism.py`)** -
+a CORRECTION to the original framing: H6b was initially described as
+"calm before the storm" (implying a sharp crash). Built the full
+day-by-day return trajectory (not just the endpoint at day 60) - the
+picture is different:
 
-- Разрыв между сигнальной группой и базой **нарастает постепенно и
-  равномерно** на протяжении всех 60 дней, не одним резким скачком
-  в конкретный день
-- BTC: сигнальная группа топчется около нуля, пока база стабильно растёт
-  (общий рост рынка) — "не успевает за рынком", а не "падает"
-- ETH: сигнальная группа сама постепенно снижается (от −1.6% на 5-й день
-  до −6% на 60-й) на фоне растущей базы
-- Худшая точка внутри окна (максимальная просадка) у сигнальной группы
-  лишь немного глубже базы (BTC −14.83% vs −12.12%, ETH −22.89% vs
-  −16.52%) — не резкий обвал, а стабильно чуть хуже на всём протяжении
+- The gap between the signal group and the baseline **widens gradually
+  and steadily** across the full 60 days, not in one sharp move on a
+  specific day
+- BTC: the signal group treads water while the baseline steadily rises
+  (general market uptrend) - "fails to keep pace," not "crashes"
+- ETH: the signal group itself gradually declines (from -1.6% on day 5
+  to -6% on day 60) against a rising baseline
+- The worst point reached within the window (max drawdown) for the
+  signal group is only modestly deeper than baseline (BTC -14.83% vs
+  -12.12%, ETH -22.89% vs -16.52%) - not a sharp crash, but steadily
+  somewhat worse throughout
 
-**Уточнённая формулировка H6b**: DVOL-самодовольство предшествует не
-"внезапному краху", а **периоду устойчивого отставания от рынка**,
-нарастающему на протяжении ~2 месяцев после сигнала.
+**Revised formulation of H6b**: DVOL complacency precedes not a "sudden
+crash" but a **period of sustained underperformance**, building over
+roughly 2 months after the signal.
 
 ---
 
-## H5 — RSI-перепроданность как доп. подтверждение для H1b
+## H5 - RSI oversold as additional confirmation for H1b
 
-**Статус**: inconclusive / не полезно для 90-дневного горизонта
-(2026-09-07)
+**Status**: inconclusive / not useful at the 90-day horizon (2026-09-07)
 
-**Формулировка**: среди дней сигнала H1b, сильнее ли эффект, когда RSI(14)
-ТОЖЕ показывает перепроданность (<30, учебниковый порог) одновременно
-с funding rate? Два независимых индикатора (из разных данных: цена/объём
-vs funding rate) подтверждают друг друга.
+**Formulation**: among H1b's signal days, is the effect stronger when
+RSI(14) ALSO shows oversold (<30, textbook threshold) at the same time
+as funding rate? Two independent indicators (from different data: price/
+volume vs funding rate) confirming each other.
 
-**Результат** (`backtest_h5_rsi_funding.py`, разведка на всех 7
-горизонтах):
+**Result** (`backtest_h5_rsi_funding.py`, exploration across all 7 horizons):
 
-| Горизонт | Группа | n | Δ доходности | Δ частоты крупного роста |
+| Horizon | Group | n | Return Delta | Large-rally-frequency Delta |
 |---|---|---|---|---|
-| 14 дней | Оба индикатора | **11** | +6.71 | +12.42 п.п. |
-| 14 дней | Только funding | 87 | +0.81 | +1.45 п.п. |
-| 90 дней | Оба индикатора | **11** | +4.74 | +13.13 п.п. |
-| 90 дней | Только funding | 87 | +6.32 | +8.11 п.п. |
-| 180 дней | Оба индикатора | **11** | **−7.54** | +3.43 п.п. |
-| 180 дней | Только funding | 86 | **+9.42** | +10.73 п.п. |
+| 14 days | Both indicators | **11** | +6.71 | +12.42 pp |
+| 14 days | Funding only | 87 | +0.81 | +1.45 pp |
+| 90 days | Both indicators | **11** | +4.74 | +13.13 pp |
+| 90 days | Funding only | 87 | +6.32 | +8.11 pp |
+| 180 days | Both indicators | **11** | **-7.54** | +3.43 pp |
+| 180 days | Funding only | 86 | **+9.42** | +10.73 pp |
 
-**Критическая оговорка**: группа "оба индикатора" — всего **11 эпизодов**
-за 7 лет, крайне маленькая выборка, отдельные числа ненадёжны.
+**Critical caveat**: the "both indicators" group is only **11 episodes**
+across 7 years - an extremely small sample, individual numbers are unreliable.
 
-**Вывод**: на коротких горизонтах (3-14 дней) комбинация выглядит сильнее
-одного funding — но там и так низкое доверие к результатам (нестабильность
-30-дневки в предыдущих гипотезах + n=11). На нашем единственном реально
-подтверждённом walk-forward'ом горизонте (90 дней) добавление RSI НЕ
-улучшает результат (хуже, чем один funding), а на 180 днях комбинация
-вообще уходит в минус. Не усложняем H1b этой комбинацией — не даёт
-явного улучшения там, где эффект уже подтверждён.
+**Conclusion**: at short horizons (3-14 days) the combination looks
+stronger than funding alone - but trust in results there is already low
+(30-day instability seen in prior hypotheses, plus n=11). At our only
+horizon actually confirmed by walk-forward (90 days), adding RSI does
+NOT improve the result (worse than funding alone), and at 180 days the
+combination goes negative outright. Not complicating H1b with this
+combination - no clear improvement where the effect is already confirmed.
 
 ---
 
-## H3 — DVOL как фильтр/подтверждение для H1b
+## H3 - DVOL as a filter/confirmation for H1b
 
-**Статус**: mixed — подтверждается на 90 днях, противоречит на 30
-(2026-09-07)
+**Status**: mixed - confirms at 90 days, contradicts at 30 (2026-09-07)
 
-**Формулировка**: среди дней с сигналом H1b (перегружены шортами),
-сильнее ли эффект, когда DVOL (опционная волатильность) ТОЖЕ повышен
-(выше своей 90-дневной медианы), по сравнению со случаями, когда DVOL
-спокоен? Прямая проверка исходной идеи PLAN.md — опционы как "фильтр
-умных денег". Ограничение данных: доступно только с 2021-06-21 (DVOL
-существует с 2021-03-24 + 90 дней на перцентиль) — меньше данных, чем
-в исходном H1b.
+**Formulation**: among days with H1b's signal (crowded shorts), is the
+effect stronger when DVOL (options volatility) is ALSO elevated (above
+its own 90-day median) compared to when DVOL is calm? A direct test of
+PLAN.md's original idea - options as a "smart money" filter. Data
+constraint: only available from 2021-06-21 (DVOL exists from 2021-03-24
++ 90 days for the percentile) - less data than the original H1b.
 
-**Результат** (`backtest_h3_dvol_filter.py`, n — независимые эпизоды):
+**Result** (`backtest_h3_dvol_filter.py`, n = independent episodes):
 
-| Горизонт | Группа | n (эпизодов) | Δ доходности | Δ частоты крупного роста |
+| Horizon | Group | n (episodes) | Return Delta | Large-rally-frequency Delta |
 |---|---|---|---|---|
-| 90 дней | DVOL тоже в стрессе | 35 | **+14.43** | **+17.68 п.п.** |
-| 90 дней | DVOL спокоен | 53 | +3.42 | +3.88 п.п. |
-| 30 дней | DVOL тоже в стрессе | 35 | +0.93 | −6.86 п.п. |
-| 30 дней | DVOL спокоен | 53 | +2.41 | +5.10 п.п. |
+| 90 days | DVOL also stressed | 35 | **+14.43** | **+17.68 pp** |
+| 90 days | DVOL calm | 53 | +3.42 | +3.88 pp |
+| 30 days | DVOL also stressed | 35 | +0.93 | -6.86 pp |
+| 30 days | DVOL calm | 53 | +2.41 | +5.10 pp |
 
-**Вывод**: на 90 днях гипотеза подтверждается ещё сильнее, чем на сырых
-днях (эффект теперь в ~4 раза выше в группе с подтверждением опционным
-рынком, было в 2-3 раза). На 30 днях по-прежнему нестабильно/неоднозначно
-(один из двух показателей поменял знак после пересчёта на эпизодах). Это уже третий случай (после H1a,
-H1b), где 30-дневный горизонт даёт нестабильный/противоречивый результат
-— похоже на системную особенность этого горизонта в данных (возможно,
-сквизу нужно больше времени, чтобы развернуться), а не случайность одной
-гипотезы. Не тестировать больше на 30 днях без отдельного разбора этой
-особенности.
-
----
-
-## Методологическая заметка: у нас пока НЕТ настоящего out-of-sample (2026-09-07)
-
-Честное признание: всё, что делали до сих пор (разведочный прогон + walk-forward
-по годам) использовало ВСЮ историю целиком, включая самые свежие данные —
-это проверка устойчивости во времени, не слепой out-of-sample тест,
-который PLAN.md обещал с самого начала. "Будущие" данные уже видели —
-задним числом объявить какой-то прошлый кусок "out-of-sample" нечестно.
-
-**Протокол на будущее** — используем реальное будущее, которого ещё нет:
-
-Гипотезы **заморожены** на дату 2026-09-07, точные параметры:
-- **H1b**: funding_percentile_90d < 0.05, горизонт 90 дней
-- **H3**: то же + DVOL_percentile_90d > 0.5 (фильтр "опционы тоже в стрессе")
-
-**Обновлено (2026-09-07)**: решили не делать это блокирующим требованием
-(слишком медленно для темпа проекта, а walk-forward по 6 разным рыночным
-режимам и так даёт содержательную проверку устойчивости). Вместо строгого
-требования — лёгкая, бесплатная привычка: раз в месяц-два перезапускать
-эти же замороженные тесты на новых данных (автосбор и так работает
-в фоне) и заносить результат сюда как дополнительную, необязательную
-проверку. Не гарантия защиты от подгонки гипотезы под данные, но лучше,
-чем ничего, и ничего не стоит по времени.
-
-## Методологическая заметка: множественные сравнения (2026-09-07)
-
-Чем больше гипотез тестируем, тем выше шанс случайно найти "закономерность",
-которой на самом деле нет — просто по теории вероятностей: если проверить
-20 случайных идей с порогом "значимо на уровне 5%", штуку-другую найдём
-даже без всякого реального эффекта. Это ровно то, от чего с самого начала
-предостерегает PLAN.md (overfitting/data snooping).
-
-**Счётчик протестированных гипотез** (для калибровки доверия к новым
-"находкам" — чем длиннее список, тем скептичнее нужно быть):
-1. H1a — rejected
-2. H1c — rejected
-3. H1b — promising, но не строго доказана (см. её раздел — тесты значимости
-   расходятся)
-4. H3 — mixed (подтверждается на 90д, противоречит на 30д)
-5. H5 — inconclusive/не полезно (не улучшает H1b на 90д, ненадёжная
-   выборка на коротких горизонтах)
-6. H2 — rejected (RSI работает противоположно учебнику)
-7. H6a — rejected (DVOL-паника → отскок, эффекта нет)
-8. H6b — **лучший результат**, walk-forward 5/5 + оба теста значимости
-   (DVOL-самодовольство → падения), пока проверен только на BTC
-9. H4 — rejected (Боллинджер, та же momentum-картина, что H2)
-
-**Обновление (2026-09-07)**: H1b на 20 монетах — rejected как
-универсальная закономерность (p=0.0019, знак отрицательный). H6b
-подтвердилась на ETH (второй доступный актив) и в её механике —
-на сегодня лучший, самый проверенный результат проекта.
-
-10. H7 — rejected (скорость изменения funding, направления расходятся
-    между активами так же, как у мёртвой H1b)
-11. H8 — интересно, но БЕЗ причинного объяснения (Wednesday-эффект,
-    держим с осторожностью, не строим решений без подтверждения)
-12. H10 — confirmed как уточнение H6b (без ралли — сильнее, чем после)
-13. H11 — rejected (объём торгов не предсказывает следующий день)
-14. H12 — inconclusive (ETH/BTC ratio — впечатляющий сырой p-value не
-    пережил эпизоды/walk-forward, урок методологии)
-15. H13 — rejected (базис фьючерс/спот, вероятно избыточен относительно
-    funding rate — тот и так "подрезает" базис каждые 8 часов)
-16. H14 — inconclusive (реализованная волатильность на 20 монетах —
-    впечатляющий пул (p=0.0000) не пережил walk-forward, эффект
-    концентрирован в 2021-2022, отсутствует в 2024-2026)
-
-При 16 проверенных гипотезах — 8 отклонены (H1a, H1c, H2, H4, H6a, H7,
-H11, H13), плюс H12 и H14 inconclusive после проверки — оба случая, где
-эффектный сырой результат не пережил рутину (эпизоды/walk-forward),
-H1b отклонена как универсальная закономерность (жива только на BTC/паре
-монет), H6b — наш главный, наиболее подтверждённый результат (плюс H10
-как её уточнение), H3/H5 — уточнения к уже мёртвой H1b (не пересматриваем
-задним числом, просто не строим на них дальше), H8 — статистически
-устойчивая, но необъяснённая находка, отдельная категория осторожности.
-Нормальное соотношение для такого числа проверок. Если из следующих 10
-гипотез вдруг 8 окажутся "значимыми" — повод заподозрить ошибку
-в методологии, а не праздновать успех.
+**Conclusion**: at 90 days the hypothesis is confirmed even more
+strongly than on raw days (the effect is now ~4x higher in the
+options-confirmed group, was 2-3x before). At 30 days it remains
+unstable/ambiguous (one of the two metrics flipped sign after
+recomputing on episodes). This is now the third case (after H1a, H1b)
+where the 30-day horizon gives an unstable/contradictory result - looks
+like a systematic property of this horizon in the data (perhaps a
+squeeze needs more time to unwind), not a coincidence of one hypothesis.
+Not testing further at 30 days without a dedicated investigation of
+this quirk.
 
 ---
 
-## H1 — Экстремальный funding rate → откат цены
+## Methodological note: we don't yet have a true out-of-sample test (2026-09-07)
 
-**Статус**: split — см. H1a (rejected) и H1b (promising, требует walk-forward)
+Honest admission: everything done so far (exploratory pass + year-by-
+year walk-forward) used the ENTIRE history at once, including the most
+recent data - a robustness-over-time check, not the blind out-of-sample
+test PLAN.md promised from the start. "Future" data has already been
+seen - retroactively declaring some past chunk "out-of-sample" would be
+dishonest.
 
-**Формулировка (исходная)**: когда funding rate находится на экстремуме
-относительно своей 90-дневной истории (перцентиль > 95 — толпа перегружена
-лонгами, либо < 5 — перегружена шортами), в ближайшие N дней цена
-с повышенной вероятностью и амплитудой движется ПРОТИВ перегруженной
-стороны.
+**Protocol going forward** - using real future data that doesn't exist yet:
 
-**Данные**: `funding_percentile_90d` (таблица `indicators`) + цена
-(`candles`). Полная история 2019-2026.
+Hypotheses **frozen** as of 2026-09-07, exact parameters:
+- **H1b**: funding_percentile_90d < 0.05, 90-day horizon
+- **H3**: same + DVOL_percentile_90d > 0.5 ("options also stressed" filter)
 
-**Метод проверки** (`backtest_h1.py`, разведочный прогон на всей истории
-целиком, НЕ walk-forward):
-- Два случая считаются раздельно, не смешиваются в одну цифру
-- Для каждого сигнального дня и горизонта N ∈ {3,7,14,30,60,90,180} —
-  фактическая доходность цены через N дней (не бинарно верно/неверно)
-- Сравнение со средней/медианной доходностью по ВСЕМ дням истории за тот
-  же горизонт (база — контроль на общий рост/падение рынка)
-- Отдельно — частота КРУПНЫХ движений (≥5%) в ожидаемую сторону, сигнал
-  vs база
-- Оговорка: сигнальные дни не независимы (funding остаётся экстремальным
-  по несколько дней подряд), окна на длинных горизонтах сильно
-  пересекаются — это разведка, не финальное подтверждение
+**Update (2026-09-07)**: decided not to make this a blocking requirement
+(too slow for the project's pace, and walk-forward across 6 distinct
+market regimes already provides a meaningful robustness check). Instead
+of a strict requirement - a light, free habit: re-run these same frozen
+tests on new data every month or two (the auto-collector runs in the
+background anyway) and log the result here as an optional extra check.
+Not a guarantee against fitting a hypothesis to the data, but better
+than nothing and costs no real time.
 
-**Результат (2026-09-07, BTCUSDT, n≈154-178 сигналов на горизонт)**:
-исходная симметричная гипотеза распалась на две сильно разные половины —
-см. H1a и H1b ниже.
+## Methodological note: multiple comparisons (2026-09-07)
 
-**Вывод**: гипотезу в исходной (симметричной) форме отклоняем. Разделяем
-на две отдельные гипотезы для дальнейшей работы.
+The more hypotheses we test, the higher the chance of stumbling on a
+"pattern" that isn't real - simple probability: testing 20 random ideas
+at a "significant at 5%" threshold will turn up a couple of hits even
+with zero real effect anywhere. This is exactly what PLAN.md warned
+about from the start (overfitting/data snooping).
 
----
+**Tested-hypothesis counter** (to calibrate trust in new "findings" -
+the longer the list, the more skeptical to be):
+1. H1a - rejected
+2. H1c - rejected
+3. H1b - promising, but not rigorously proven (see its section - the
+   significance tests disagree)
+4. H3 - mixed (confirms at 90d, contradicts at 30d)
+5. H5 - inconclusive/not useful (doesn't improve H1b at 90d, unreliable
+   sample at short horizons)
+6. H2 - rejected (RSI works opposite the textbook assumption)
+7. H6a - rejected (DVOL panic -> bounce, no effect)
+8. H6b - **best result**, walk-forward 5/5 + both significance tests
+   (DVOL complacency -> drops), tested only on BTC so far
+9. H4 - rejected (Bollinger, same momentum picture as H2)
 
-## H1a — Перегруженные ЛОНГИ → откат вниз
+**Update (2026-09-07)**: H1b rejected as a universal pattern across 20
+coins (p=0.0019, sign negative). H6b confirmed on ETH (the second
+available asset) and in its mechanism - the project's best, most
+validated result to date.
 
-**Статус**: inconclusive, требует walk-forward (обновлено 2026-09-07,
-исправлена методологическая ошибка — см. ниже)
+10. H7 - rejected (funding rate velocity, directions disagree between
+    assets the same way the dead H1b did)
+11. H8 - interesting but WITHOUT a causal explanation (the Wednesday
+    effect, held with caution, no decisions built on it without confirmation)
+12. H10 - confirmed as a refinement of H6b (without a rally - stronger
+    than after one)
+13. H11 - rejected (trading volume doesn't predict the next day)
+14. H12 - inconclusive (ETH/BTC ratio - an impressive raw p-value that
+    didn't survive episodes/walk-forward, a methodology lesson)
+15. H13 - rejected (futures/spot basis, likely redundant with funding
+    rate, which already "trims" basis every 8 hours)
+16. H14 - inconclusive (realized volatility across 20 coins - an
+    impressive pool (p=0.0000) that didn't survive walk-forward, the
+    effect concentrated in 2021-2022, absent in 2024-2026)
 
-**Первая попытка (ошибочная)**: изначально считали только "стала ли
-частота крупных падений ниже базы" и сделали вывод "rejected". Это было
-преждевременно — одна урезанная метрика не может отличить "будет расти",
-"будет более гладкое падение" (то же направление, но без резких обвалов)
-и "волатильность просто упала в обе стороны". Пересчитано симметрично:
-среднее, медиана, волатильность (std) и частота крупных движений ОТДЕЛЬНО
-вверх/вниз, каждое — против своей базы.
-
-**Результат v2 — эффект неоднороден по горизонту**:
-- 7-30 дней: волатильность НИЖЕ базы, крупные движения реже в обе
-  стороны — похоже на общее затишье, не на разворот
-- 60-90 дней: волатильность не меняется, но крупные РОСТЫ заметно чаще
-  базы (+6.6...+10.0 п.п.), крупные падения заметно реже (−5.4...−11.1
-  п.п.) — похоже на продолжение роста, а не просто "тише"
-- 180 дней: резкий скачок волатильности БАЗЫ (44.75 → 87.32) — вероятно,
-  искажение одним-двумя крупными движениями рынка в конце датасета
-  (2025-2026). Этому горизонту пока не доверяем
-
-**Вывод**: эффект есть, но неоднородный и на длинных горизонтах, возможно,
-искажён малым числом независимых периодов (тот же риск пересечения окон
-и малой независимости сигнальных дней, что и в H1b). См. H1c ниже —
-довели эту идею до полноценной проверки walk-forward.
-
-**Дополнительная проверка (2026-09-07) — абсолютная, а не только
-относительная доходность**: важное методологическое уточнение из
-обсуждения в чате — "сигнал лучше базы" (эдж) НЕ равно "сделка
-прибыльна". Проверили `mean_return` САМ ПО СЕБЕ (без вычитания базы) для
-сделки, которую подразумевает исходная гипотеза H1a — шорт после сигнала:
-доходность цены оказалась ПОЛОЖИТЕЛЬНОЙ на всех 7 горизонтах (0.99% на
-3 днях → 26.83% на 180). Значит реальный шорт после этого сигнала в
-среднем ТЕРЯЛ БЫ деньги на этом периоде истории, несмотря на некоторый
-относительный "эдж" по частоте крупных падений. Это подтверждает вывод
-inconclusive/не тестируем как "шорт-гипотезу" в исходном виде — если
-что-то и есть, то это не про шорт.
-
-Для сравнения — H1b (покупка после сигнала "перегружены шортами"):
-`mean_return` тоже положителен на всех горизонтах И превышает базу на
-каждом из них без исключения — это отличает H1b от H1a: там сделка не
-только не убыточна, но и обгоняет общий рост рынка, а не просто "меньше
-теряет, чем случайная сделка".
+At 16 hypotheses tested - 8 rejected (H1a, H1c, H2, H4, H6a, H7, H11,
+H13), plus H12 and H14 inconclusive after scrutiny (both cases where an
+impressive raw result didn't survive the routine of episodes/walk-
+forward), H1b rejected as a universal pattern (alive only on BTC/a
+handful of coins), H6b our leading, most-validated result (plus H10 as
+its refinement), H3/H5 are refinements of the already-dead H1b (not
+retroactively revised, just not built upon further), H8 a statistically
+robust but unexplained finding in its own caution category. A normal
+ratio for this many tests. If 8 of the next 10 hypotheses suddenly turn
+out "significant," that's a reason to suspect a methodology error, not
+to celebrate.
 
 ---
 
-## H1c — Перегруженные ЛОНГИ → покупать (следовать за толпой)
+## H1 - Extreme funding rate -> price reversal
 
-**Статус**: rejected/no edge (2026-09-07)
+**Status**: split - see H1a (rejected) and H1b (promising, needs walk-forward)
 
-**Формулировка**: раз доходность после сигнала "перегружены лонгами"
-часто положительна (см. H1a), может, это не отсутствие эффекта, а сигнал
-на ПОКУПКУ (следовать за толпой, а не идти против неё)? Предложено
-в чате — проверяем с той же строгостью (walk-forward), что и H1b, а не
-на глаз.
+**Formulation (original)**: when funding rate sits at an extreme
+relative to its own 90-day history (percentile > 95 - the crowd is
+crowded long, or < 5 - crowded short), price moves against the crowded
+side with elevated probability and magnitude over the following N days.
 
-**Walk-forward, горизонт 90 дней** (n — независимые эпизоды, не сырые дни,
-4-18 на период):
+**Data**: `funding_percentile_90d` (`indicators` table) + price
+(`candles`). Full 2019-2026 history.
 
-| Период | n (эпизодов) | Δ доходности | Δ частоты крупного роста |
+**Test method** (`backtest_h1.py`, exploratory pass over the entire
+history at once, NOT walk-forward):
+- The two sides are scored separately, never blended into one number
+- For each signal day and horizon N in {3,7,14,30,60,90,180}: the
+  actual price return over N days (not a binary right/wrong)
+- Compared against the mean/median return across ALL days of history at
+  the same horizon (baseline - controls for the market's general drift)
+- Separately: the frequency of LARGE moves (>=5%) in the expected
+  direction, signal vs baseline
+- Caveat: signal days aren't independent (funding stays extreme for
+  several consecutive days), and windows overlap heavily at longer
+  horizons - this is exploration, not final confirmation
+
+**Result (2026-09-07, BTCUSDT, n~154-178 signals per horizon)**: the
+original symmetric hypothesis split into two very different halves -
+see H1a and H1b below.
+
+**Conclusion**: the hypothesis in its original (symmetric) form is
+rejected. Split into two separate hypotheses for further work.
+
+---
+
+## H1a - Crowded LONGS -> reversal down
+
+**Status**: inconclusive, needs walk-forward (updated 2026-09-07, a
+methodology error was fixed - see below)
+
+**First attempt (flawed)**: originally only checked "did large-drop
+frequency fall below baseline" and concluded "rejected." This was
+premature - one narrow metric can't distinguish "will rally," "will
+just have a smoother decline" (same direction, without sharp crashes),
+and "volatility simply dropped in both directions." Recomputed
+symmetrically: mean, median, volatility (std), and large-move frequency
+UP/DOWN separately, each against its own baseline.
+
+**Result v2 - the effect is horizon-dependent**:
+- 7-30 days: volatility BELOW baseline, large moves rarer in both
+  directions - looks like general calm, not a reversal
+- 60-90 days: volatility unchanged, but large RALLIES noticeably more
+  frequent than baseline (+6.6...+10.0 pp), large drops noticeably rarer
+  (-5.4...-11.1 pp) - looks more like continued gains than just "calmer"
+- 180 days: a sharp jump in the BASELINE's volatility (44.75 -> 87.32) -
+  likely distorted by one or two large market moves at the end of the
+  dataset (2025-2026). This horizon isn't trusted yet
+
+**Conclusion**: there's an effect, but it's horizon-dependent and
+possibly distorted by a small number of independent periods (the same
+window-overlap and low-independence risk as H1b). See H1c below - this
+idea was carried through to a full walk-forward test.
+
+**Additional check (2026-09-07) - absolute, not just relative, return**:
+an important methodological point from the discussion - "signal beats
+baseline" (an edge) does NOT equal "the trade is profitable." Checked
+`mean_return` ON ITS OWN (without subtracting baseline) for the trade
+H1a's original hypothesis implies - shorting after the signal: price
+return was POSITIVE at all 7 horizons (0.99% at 3 days -> 26.83% at
+180). So an actual short after this signal would have LOST money on
+average over this period, despite some relative "edge" in large-drop
+frequency. Confirms the inconclusive verdict / not testing this as a
+"short hypothesis" in its original form - whatever is there, it isn't
+about shorting.
+
+For comparison - H1b (buying after the "crowded shorts" signal):
+`mean_return` is also positive at every horizon AND beats baseline at
+every one without exception - this is what separates H1b from H1a:
+there, the trade isn't just non-lossy, it outpaces the general market
+uptrend, not merely "loses less than a random trade."
+
+---
+
+## H1c - Crowded LONGS -> buy (follow the crowd)
+
+**Status**: rejected/no edge (2026-09-07)
+
+**Formulation**: since returns after the "crowded longs" signal are
+often positive (see H1a), maybe that's not an absence of effect but a
+BUY signal (follow the crowd rather than fade it)? Proposed in
+discussion - tested with the same rigor (walk-forward) as H1b rather
+than by eye.
+
+**Walk-forward, 90-day horizon** (n = independent episodes, not raw
+days, 4-18 per period):
+
+| Period | n (episodes) | Return Delta | Large-rally-frequency Delta |
 |---|---|---|---|
-| 2019-2020 | 18 | **−4.34** | **−22.56 п.п.** |
-| 2021 | 14 | **−5.13** | +3.42 п.п. |
-| 2022 | **4** | +28.97 | +26.71 п.п. |
-| 2023 | 9 | +3.56 | +4.63 п.п. |
-| 2024 | 12 | +1.14 | +3.69 п.п. |
-| 2025-2026 | 12 | +3.36 | −8.33 п.п. |
+| 2019-2020 | 18 | **-4.34** | **-22.56 pp** |
+| 2021 | 14 | **-5.13** | +3.42 pp |
+| 2022 | **4** | +28.97 | +26.71 pp |
+| 2023 | 9 | +3.56 | +4.63 pp |
+| 2024 | 12 | +1.14 | +3.69 pp |
+| 2025-2026 | 12 | +3.36 | -8.33 pp |
 
-**Горизонт 30 дней**: аналогично нестабильно, знаки скачут по периодам.
+**30-day horizon**: similarly unstable, signs jump around by period.
 
-**Вывод**: в отличие от H1b, здесь знаки нестабильны между периодами
-(на эпизодах картина стала даже более явно "шумной", чем на сырых днях —
-2019-2020 и 2021 из слабо-положительных превратились в отрицательные),
-метрики внутри периода иногда противоречат друг другу, а в 2022 году
-всего 4 независимых эпизода — недостаточно для выводов. Похоже на шум,
-а не закономерность. "Положительная доходность после сигнала" в
-разведочном прогоне объяснялась общим ростом рынка (база тоже почти
-всегда положительна), а не реальным эффектом сигнала. Идею не преследуем
-дальше.
+**Conclusion**: unlike H1b, the signs are unstable across periods (on
+episodes the picture became even more clearly "noisy" than on raw days
+- 2019-2020 and 2021 flipped from weakly positive to negative), metrics
+within a period sometimes contradict each other, and 2022 has only 4
+independent episodes - not enough for a conclusion. Looks like noise,
+not a pattern. The "positive return after the signal" in the exploratory
+pass was explained by the market's general uptrend (the baseline is
+almost always positive too), not a real signal effect. Not pursued further.
 
 ---
 
-## H1b — Перегруженные ШОРТЫ → рост вверх
+## H1b - Crowded SHORTS -> rally up
 
-**Статус**: rejected как универсальная закономерность — на 20 монетах
-объединённый результат статистически значимо ОТРИЦАТЕЛЕН (см. проверку
-в конце раздела). Работает (возможно) только на BTC/нескольких крупных
-монетах, не обобщается (обновлено 2026-09-07)
+**Status**: rejected as a universal pattern - across 20 coins the pooled
+result is statistically significantly NEGATIVE (see the check at the
+end of this section). Possibly works only on BTC/a handful of large
+coins, doesn't generalize (updated 2026-09-07)
 
-**Результат**: и средняя доходность, и частота крупных (≥5%) движений
-вверх превышают базовую линию почти на всех горизонтах (кроме небольшого
-минуса по частоте крупных движений на 30 днях), причём эдж по частоте
-крупных движений РАСТЁТ с горизонтом (+3.2 п.п. на 3 днях → +8.6 п.п. на
-90 днях → +8.0 п.п. на 180 днях).
+**Result**: both the mean return and the frequency of large (>=5%)
+upward moves beat the baseline at almost every horizon (except a small
+negative in large-move frequency at 30 days), with the large-move-
+frequency edge GROWING with horizon (+3.2 pp at 3 days -> +8.6 pp at 90
+days -> +8.0 pp at 180 days).
 
-**Следующий шаг**: прогнать через полноценный walk-forward (не единый
-прогон по всей истории) — проверить, что эффект стабилен в разных
-рыночных режимах (бычьих и медвежьих периодах отдельно), а не тянется
-одним удачным куском истории.
+**Next step**: run through full walk-forward (not a single pass over
+the whole history) - check the effect is stable across different market
+regimes (bull and bear periods separately), not carried by one lucky
+stretch of history.
 
-**Walk-forward, горизонт 90 дней (`backtest_h1b_walkforward.py`)**: база
-считается отдельно для каждого периода (по всем дням периода, не только
-сигнальным), чтобы не путать эффект сигнала с "просто хороший год для
-рынка". n — количество НЕЗАВИСИМЫХ ЭПИЗОДОВ (соседние сигнальные дни
-схлопнуты в одно событие, см. методологическую заметку про автокорреляцию
-пересекающихся окон), не сырых дней:
+**Walk-forward, 90-day horizon (`backtest_h1b_walkforward.py`)**: the
+baseline is computed separately for each period (over all days in that
+period, not just signal days), to avoid confusing the signal's effect
+with "just a good year for the market." n = number of INDEPENDENT
+EPISODES (adjacent signal days collapsed into one event, see the
+autocorrelation note), not raw days:
 
-| Период | n (эпизодов) | edge_mean | edge_big_up_freq |
+| Period | n (episodes) | edge_mean | edge_big_up_freq |
 |---|---|---|---|
-| 2019-2020 (COVID-крах) | 7 | +52.46 | +13.16 п.п. |
-| 2021 (бычий → коррекция) | 10 | +37.54 | +43.42 п.п. |
-| 2022 (медвежий, крах Luna/FTX) | 15 | −5.63 | −3.29 п.п. |
-| 2023 (восстановление) | 15 | +5.82 | +6.85 п.п. |
-| 2024 (ETF-ралли) | 19 | +11.50 | +8.51 п.п. |
-| 2025-2026 | 26 | +4.89 | +12.82 п.п. |
+| 2019-2020 (COVID crash) | 7 | +52.46 | +13.16 pp |
+| 2021 (bull -> correction) | 10 | +37.54 | +43.42 pp |
+| 2022 (bear, Luna/FTX collapse) | 15 | -5.63 | -3.29 pp |
+| 2023 (recovery) | 15 | +5.82 | +6.85 pp |
+| 2024 (ETF rally) | 19 | +11.50 | +8.51 pp |
+| 2025-2026 | 26 | +4.89 | +12.82 pp |
 
-5 из 6 периодов — положительный эдж, включая разные режимы (не только
-бычьи). Единственное исключение (2022) объяснимо содержательно: обвал был
-на фундаментальных новостях (банкротства), а не на чисто технической
-перегретой позиции — там сигнал и не должен был сработать (на эпизодах
-эдж 2022 стал чуть более отчётливо отрицательным, чем на сырых днях, но
-общий вывод не меняется). Это первое реальное подтверждение эффекта, не
-просто среднее по одному удачному периоду.
+5 of 6 periods show a positive edge, across different regimes (not just
+bull markets). The single exception (2022) is substantively explainable:
+that crash was driven by fundamental news (bankruptcies), not purely
+technical overheated positioning - the signal wasn't expected to work
+there (on episodes, 2022's edge became slightly more clearly negative
+than on raw days, but the overall conclusion doesn't change). This is
+the first real confirmation of the effect, not just an average over one
+lucky period.
 
-**Walk-forward, горизонт 30 дней** — гораздо менее устойчиво: знаки эджа
-по частоте крупных ростов скачут туда-сюда по периодам (2021: −7.49 п.п.,
-2023: −3.59 п.п.), а в последнем периоде (2025-2026) эффект РАЗВОРАЧИВАЕТСЯ
-в заметный минус (edge_mean −3.38, edge_big_up −18.65 п.п.).
+**Walk-forward, 30-day horizon** - far less stable: the sign of the
+large-rally-frequency edge swings by period (2021: -7.49 pp, 2023: -3.59
+pp), and in the most recent period (2025-2026) the effect REVERSES
+notably negative (edge_mean -3.38, edge_big_up -18.65 pp).
 
-**Вывод**: H1b на 90-дневном горизонте выглядит реальной, устойчивой
-закономерностью (не идеальной — n на период маленький, нужно больше
-проверок). На 30-дневном горизонте — ненадёжна, включая тревожный разворот
-в самом свежем периоде. Практический вывод: если использовать H1b как
-сигнал, ориентироваться на среднесрочный (90 дней), а не краткосрочный
-(30 дней) горизонт.
+**Conclusion**: H1b at the 90-day horizon looks like a real, consistent
+pattern (not a perfect one - the per-period n is small, more checks
+needed). At the 30-day horizon it's unreliable, including a worrying
+reversal in the most recent period. Practical takeaway: if using H1b as
+a signal, anchor to the medium-term (90-day) rather than short-term
+(30-day) horizon.
 
-**Проверка статистической значимости (2026-09-07, горизонт 90 дней)**:
-159 "сырых" сигнальных дней схлопнуты в **92 независимых эпизода**
-(соседние дни с экстремальным funding считаются одним событием, не
-несколькими) — цифры почти не изменились (среднее 21.52% против 22.36%
-на сырых днях), эффект не является задвоением одного события.
+**Statistical significance check (2026-09-07, 90-day horizon)**: 159
+"raw" signal days collapsed into **92 independent episodes** (adjacent
+days with extreme funding count as one event, not several) - the
+numbers barely changed (mean 21.52% vs 22.36% on raw days), so the
+effect isn't just double-counting one event.
 
-Формальные тесты дают РАЗНЫЙ ответ:
-- t-test (сравнение средних, чувствителен к выбросам): **p=0.134** —
-  не значимо на уровне 5%
-- Mann-Whitney U (сравнение распределений по рангам, устойчив
-  к выбросам): **p=0.018** — значимо на уровне 5%
+The formal tests disagree:
+- t-test (compares means, sensitive to outliers): **p=0.134** - not
+  significant at 5%
+- Mann-Whitney U (compares rank distributions, robust to outliers):
+  **p=0.018** - significant at 5%
 
-95% доверительный интервал средней доходности сигнальной группы:
-[12.76%, 30.27%] — не ноль, но пересекается с базой (14.64%).
+95% CI for the signal group's mean return: [12.76%, 30.27%] - not zero,
+but overlaps the baseline (14.64%).
 
-Расхождение тестов объясняется тяжёлыми хвостами распределения (пара
-эпизодов с очень большой доходностью раскачивают среднее, но не влияют
-на устойчивый ранговый тест). **Честный итоговый статус: вероятно
-реальный эффект, но не железобетонно доказанный** — не "подтверждена",
-а "многообещающая, требует больше данных/эпизодов для уверенного вывода".
+The disagreement between tests is explained by heavy tails (a couple of
+very high-return episodes swing the mean without affecting the more
+robust rank test). **Honest overall status: probably a real effect, but
+not rock-solid proof** - not "confirmed," but "promising, needs more
+data/episodes for a confident conclusion."
 
-**Понижение статуса после проверки на 17 монетах, затем на 20
-(2026-09-07, `backtest_h1b_multi_symbol.py`, горизонт 90 дней)**:
-скачали историю по топ-20 крипто-перпетуалов Binance (исключив
-токенизированные традиционные активы вроде золота/акций). 3 монеты
-младше ~400 дней заменены на давно торгуемые (ADAUSDT, LTCUSDT,
-AVAXUSDT) — итого 20 монет с достаточной историей.
+**Downgrade after testing on 17 coins, then 20 (2026-09-07,
+`backtest_h1b_multi_symbol.py`, 90-day horizon)**: downloaded history
+for the top 20 crypto perpetuals on Binance (excluding tokenized
+traditional assets like gold/stocks). 3 coins younger than ~400 days
+were swapped for long-established ones (ADAUSDT, LTCUSDT, AVAXUSDT) -
+20 coins total with sufficient history.
 
-Только **8 из 20** монет показывают положительный эдж, сам BTC (+6.87)
-скромнее нескольких других (SOL +28.29, BNB +22.67). Все 3 новые монеты
-(ADA −28.28, LTC −14.10, AVAX −44.47) оказались в минусе.
+Only **8 of 20** coins show a positive edge, and BTC itself (+6.87) is
+more modest than several others (SOL +28.29, BNB +22.67). All 3 new
+coins (ADA -28.28, LTC -14.10, AVAX -44.47) came out negative.
 
-Объединённый пул (**1186 эпизодов по 20 монетам**, избыточная доходность
-каждого эпизода относительно СВОЕЙ базы монеты): средняя избыточная
-доходность **−10.46%**, 95% ДИ **[−17.03%, −3.89%]** — полностью
-в отрицательной зоне, не пересекает ноль. **t-test p=0.0019 — значимо**.
+Pooled sample (**1186 episodes across 20 coins**, each episode's excess
+return relative to its OWN coin's baseline): mean excess return
+**-10.46%**, 95% CI **[-17.03%, -3.89%]** - entirely negative, doesn't
+cross zero. **t-test p=0.0019 - significant**.
 
-**Финальный вывод**: H1b на широком крипторынке статистически значимо
-работает В ПРОТИВОПОЛОЖНУЮ сторону от исходной гипотезы — не просто "не
-подтверждается", а значимо отрицательна при объединении по активам.
-Статус: **rejected как универсальная закономерность**. То, что казалось
-эффектом "механики деривативов", вероятнее всего — особенность конкретно
-BTC (возможно, вместе с SOL/BNB) в этот период, а не фундаментальный
-эффект перегретого позиционирования на любом активе. DOGE дал
-экстремально отрицательный эдж (−50.80) — вероятно, искажающий разовый
-период, отдельно не разбирали.
+**Final conclusion**: across the broader crypto market, H1b works
+statistically significantly in the OPPOSITE direction from the original
+hypothesis - not just "unconfirmed," but significantly negative when
+pooled across assets. Status: **rejected as a universal pattern**. What
+looked like "derivatives mechanics" is more likely a BTC-specific
+quirk (possibly shared with SOL/BNB) in this period rather than a
+fundamental crowded-positioning effect on any asset. DOGE showed an
+extremely negative edge (-50.80) - likely a distorting one-off period,
+not investigated further.
 
-Дополнительная оговорка о процессе: гипотезу сначала увидели
-многообещающей (разведочный прогон + walk-forward), и только потом
-считали формальную значимость именно для неё — это не полностью слепая
-проверка, ближе к тому, от чего предостерегает PLAN.md (data snooping).
-
----
+Additional process note: the hypothesis was first seen as promising
+(exploratory pass + walk-forward), and only then tested for formal
+significance - this isn't a fully blind check, closer to the data-
+snooping PLAN.md warns against.
