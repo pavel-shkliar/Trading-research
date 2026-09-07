@@ -73,13 +73,13 @@ def compute_vwap(close: pd.Series, volume: pd.Series, period: int) -> pd.Series:
     return (close * volume).rolling(period).sum() / volume.rolling(period).sum()
 
 
-def compute_funding_percentile(funding_daily: pd.Series, window: int) -> pd.Series:
-    """Для каждого дня — на каком перцентиле относительно ПРЕДЫДУЩИХ
-    `window` дней находится сегодняшнее значение funding rate.
-    rank(pct=True) внутри rolling-окна даёт перцентиль последнего значения
-    окна относительно самого окна - без заглядывания в данные позже
-    текущей даты."""
-    return funding_daily.rolling(window).apply(lambda x: x.rank(pct=True).iloc[-1], raw=False)
+def compute_rolling_percentile(series: pd.Series, window: int) -> pd.Series:
+    """Для каждого дня - на каком перцентиле относительно ПРЕДЫДУЩИХ
+    `window` дней находится сегодняшнее значение. rank(pct=True) внутри
+    rolling-окна даёт перцентиль последнего значения окна относительно
+    самого окна - без заглядывания в данные позже текущей даты. Используется
+    и для funding rate, и для DVOL - одна и та же логика нормализации."""
+    return series.rolling(window).apply(lambda x: x.rank(pct=True).iloc[-1], raw=False)
 
 
 def classify_price_oi_divergence(price_change: float, oi_change: float) -> str:
@@ -117,7 +117,7 @@ def build_indicators(symbol: str) -> pd.DataFrame:
     )
     funding["date"] = pd.to_datetime(funding["funding_time"], utc=True).dt.normalize()
     funding_daily = funding.groupby("date")["funding_rate"].mean()
-    funding_percentile = compute_funding_percentile(funding_daily, FUNDING_PERCENTILE_WINDOW)
+    funding_percentile = compute_rolling_percentile(funding_daily, FUNDING_PERCENTILE_WINDOW)
 
     result = result.merge(
         funding_daily.rename("funding_rate_daily_avg"), on="date", how="left"
@@ -125,6 +125,25 @@ def build_indicators(symbol: str) -> pd.DataFrame:
     result = result.merge(
         funding_percentile.rename("funding_percentile_90d"), on="date", how="left"
     )
+
+    # --- DVOL (Deribit) -> перцентиль той же логикой, что funding rate ---
+    # DVOL - "температура" опционного рынка (см. PLAN.md, "фильтр умного
+    # рынка"). История доступна только с 2021-03-24 (раньше индекс не
+    # существовал) - для более ранних дат тут будут NULL, это ожидаемо,
+    # не баг.
+    dvol = read_df(
+        "SELECT ts, close FROM dvol WHERE currency = 'BTC' ORDER BY ts",
+    )
+    if not dvol.empty:
+        dvol["date"] = pd.to_datetime(dvol["ts"], utc=True).dt.normalize()
+        dvol_daily = dvol.groupby("date")["close"].mean()
+        dvol_percentile = compute_rolling_percentile(dvol_daily, FUNDING_PERCENTILE_WINDOW)
+
+        result = result.merge(dvol_daily.rename("dvol_close"), on="date", how="left")
+        result = result.merge(dvol_percentile.rename("dvol_percentile_90d"), on="date", how="left")
+    else:
+        result["dvol_close"] = None
+        result["dvol_percentile_90d"] = None
 
     # --- Open Interest -> дивергенция с ценой (доступно только там, где есть история OI) ---
     oi = read_df(
@@ -173,7 +192,9 @@ def _nan_to_none(value):
 def save_indicators(df: pd.DataFrame) -> int:
     columns = [
         "symbol", "date", "rsi_14", "bb_upper", "bb_mid", "bb_lower", "vwap_20",
-        "funding_rate_daily_avg", "funding_percentile_90d", "oi_change_pct", "price_oi_divergence",
+        "funding_rate_daily_avg", "funding_percentile_90d",
+        "dvol_close", "dvol_percentile_90d",
+        "oi_change_pct", "price_oi_divergence",
     ]
     rows = [
         tuple(_nan_to_none(v) for v in row)

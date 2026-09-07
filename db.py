@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS indicators (
     vwap_20 DOUBLE PRECISION,
     funding_rate_daily_avg DOUBLE PRECISION,
     funding_percentile_90d DOUBLE PRECISION,
+    dvol_close DOUBLE PRECISION,
+    dvol_percentile_90d DOUBLE PRECISION,
     oi_change_pct DOUBLE PRECISION,
     price_oi_divergence TEXT,
     UNIQUE (symbol, date)
