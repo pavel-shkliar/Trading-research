@@ -1,18 +1,15 @@
 """
-Walk-forward проверка H1c (новая гипотеза, предложена в чате):
-перегруженные ЛОНГИ -> ПОКУПАТЬ (следовать за толпой, не идти против неё).
+Walk-forward validation of H1c: crowded LONGS -> BUY (follow the crowd
+rather than fade it).
 
-Причина появления: разведочный прогон на всей истории показал, что цена
-после сигнала "перегружены лонгами" часто росла - но база (весь рынок
-за то же время) тоже росла почти всегда, поэтому "положительная
-доходность" сама по себе ничего не доказывает. Разница (эдж) на всей
-истории была нестабильной - плюс на 5 горизонтах, минус на 2 (30 и 180
-дней) - в отличие от H1b, где эдж был плюсовым на всех 7 горизонтах.
+Background: the exploratory pass found that price often rose after a
+"crowded longs" signal, but the baseline (the whole market over the same
+period) rose almost as often too - so raw positive returns alone prove
+nothing. The full-history edge was inconsistent (positive on 5 horizons,
+negative on 2), unlike H1b where it was positive on all 7. Tested with
+the same walk-forward procedure as H1b for a fair comparison.
 
-Проверяем той же процедурой walk-forward, что и H1b - иначе было бы
-нечестно проверять одну гипотезу строго, а другую отбрасывать на глаз.
-
-Запуск:
+Usage:
     python backtest_h1c_walkforward.py
 """
 

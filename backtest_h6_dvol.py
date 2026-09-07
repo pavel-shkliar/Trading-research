@@ -1,23 +1,22 @@
 """
-H6 (см. HYPOTHESES.md): DVOL-экстремум сам по себе, без привязки к funding.
+H6 (see HYPOTHESES.md): DVOL extremes on their own, independent of funding.
 
-Две отдельные, содержательно разные гипотезы (не путаем в одну, как
-предупреждали раньше):
+Two separate, substantively different hypotheses (kept apart, not blended
+into one number):
 
-1. DVOL высокий (percentile > 0.95, опционный рынок в панике) -> ждём
-   ОТСКОКА ВВЕРХ. Аналогия с VIX на traditional-рынках: экстремальный
-   страх часто оказывается contrarian-сигналом.
-2. DVOL низкий (percentile < 0.05, "самодовольство" рынка) -> ждём
-   УЧАЩЕНИЯ КРУПНЫХ ПАДЕНИЙ впоследствии. Народная мудрость опционного
-   рынка "затишье перед бурей" - если все расслаблены и не хеджируются,
-   сюрприз обходится дороже.
+1. DVOL high (percentile > 0.95, options market in fear) -> expect a
+   BOUNCE. Analogous to VIX on traditional markets, where extreme fear is
+   often a contrarian signal.
+2. DVOL low (percentile < 0.05, market "complacency") -> expect an
+   INCREASE in large drops afterward. Options-market folklore: "calm
+   before the storm" - if nobody is hedging, a surprise costs more.
 
-Данные по DVOL доступны только с 2021-06-21 (см. compute_indicators.py) -
-меньше истории, чем у funding rate.
+DVOL data is only available from 2021-06-21 onward (see
+compute_indicators.py) - shorter history than funding rate.
 
-Разведочный прогон на всех 7 горизонтах, эпизоды вместо сырых дней.
+Exploratory pass across all 7 horizons, episodes instead of raw days.
 
-Запуск:
+Usage:
     python backtest_h6_dvol.py
 """
 
@@ -65,29 +64,29 @@ if __name__ == "__main__":
     rows = []
     for horizon in HORIZONS:
         fwd = forward_return(df["close"], horizon)
-        baseline = summarize(fwd[has_dvol])  # база - только за период, где есть DVOL, честное сравнение
+        baseline = summarize(fwd[has_dvol])  # baseline restricted to days DVOL exists, for a fair comparison
         baseline_down = big_down_freq(fwd[has_dvol], BIG_MOVE_PCT)
 
-        # Гипотеза 1: DVOL высокий -> ждём отскока вверх
+        # Hypothesis 1: DVOL high -> expect a bounce
         s_high = summarize(fwd[dvol_high])
         edge_mean_high = (s_high["mean"] - baseline["mean"]) if s_high["mean"] is not None else None
         edge_up_high = (s_high["big_up_freq"] - baseline["big_up_freq"]) if s_high["big_up_freq"] is not None else None
         rows.append({
-            "horizon_days": horizon, "hypothesis": "DVOL высокий -> ждём роста",
+            "horizon_days": horizon, "hypothesis": "DVOL high -> expect rally",
             "n_episodes": s_high["n"], "signal_mean": s_high["mean"], "baseline_mean": baseline["mean"],
             "edge_mean": edge_mean_high,
             "signal_metric_pct": s_high["big_up_freq"], "baseline_metric_pct": baseline["big_up_freq"],
             "edge_metric_pct": edge_up_high,
         })
 
-        # Гипотеза 2: DVOL низкий -> ждём учащения крупных падений
+        # Hypothesis 2: DVOL low -> expect more frequent large drops
         s_low_down = big_down_freq(fwd[dvol_low], BIG_MOVE_PCT)
         s_low_mean = summarize(fwd[dvol_low])["mean"]
         n_low = summarize(fwd[dvol_low])["n"]
         edge_mean_low = (s_low_mean - baseline["mean"]) if s_low_mean is not None else None
         edge_down_low = (s_low_down - baseline_down) if s_low_down is not None else None
         rows.append({
-            "horizon_days": horizon, "hypothesis": "DVOL низкий -> ждём крупных падений",
+            "horizon_days": horizon, "hypothesis": "DVOL low -> expect large drops",
             "n_episodes": n_low, "signal_mean": s_low_mean, "baseline_mean": baseline["mean"],
             "edge_mean": edge_mean_low,
             "signal_metric_pct": s_low_down, "baseline_metric_pct": baseline_down,

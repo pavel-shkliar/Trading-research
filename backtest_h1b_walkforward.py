@@ -1,10 +1,10 @@
 """
-Walk-forward проверка H1b (см. HYPOTHESES.md): перегруженные шорты -> рост.
+Walk-forward validation of H1b (see HYPOTHESES.md): crowded shorts -> rally.
 
-Логика разбивки на периоды и расчёта статистики - в walkforward_common.py
-(общий код для H1b и H1c, чтобы не дублировать).
+Period-splitting and stats logic lives in walkforward_common.py, shared
+with H1c.
 
-Запуск:
+Usage:
     python backtest_h1b_walkforward.py
 """
 

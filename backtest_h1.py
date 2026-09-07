@@ -1,39 +1,26 @@
 """
-Бэктест гипотезы H1 (см. HYPOTHESES.md): экстремальный funding rate ->
-последующее движение цены против перегруженной стороны.
+Backtest of H1 (see HYPOTHESES.md): extreme funding rate -> subsequent
+price move against the crowded side.
 
-Это ПЕРВЫЙ, разведочный прогон на всей истории целиком (не walk-forward
-из PLAN.md) - чтобы понять, есть ли вообще что-то похожее на эффект,
-прежде чем тратить время на более строгую walk-forward проверку. Если
-здесь пусто - гипотезу можно закрыть как rejected сразу, не усложняя.
+First, exploratory pass over the full history (not yet walk-forward) to
+see whether an effect exists at all before investing in a stricter
+walk-forward check.
 
-Методология (v2 - исправлена после разбора в чате, см. HYPOTHESES.md):
-- Два сигнала считаются ОТДЕЛЬНО, не смешиваются в одну цифру:
-    "перегружены лонгами"   (funding_percentile_90d > LONG_THRESHOLD)
-    "перегружены шортами"   (funding_percentile_90d < SHORT_THRESHOLD)
-- ВАЖНО: статистика считается СИММЕТРИЧНО, без предположения заранее,
-  в какую сторону "должна" пойти цена. Первая версия скрипта считала
-  только "движение в ожидаемую сторону" для каждой группы - из-за этого
-  "крупных падений после перегруженных лонгов стало реже" выглядело как
-  готовый вывод "значит, будет расти". На самом деле это могло означать
-  и "будет расти", и "будет просто более гладкое падение" (то же
-  направление, но без резких обвалов), и "волатильность вообще упала
-  в обе стороны" - одна урезанная цифра не могла их отличить. Поэтому
-  теперь для КАЖДОЙ группы считаем:
-    - среднее и медиану сырого возврата (без разворота знака)
-    - волатильность (стандартное отклонение) - отвечает на вопрос
-      "стало ли вообще спокойнее", независимо от направления
-    - частоту крупных движений ВВЕРХ и ВНИЗ отдельно (не только
-      в "ожидаемую" по исходной гипотезе сторону)
-- Сравниваем каждую из этих цифр с БАЗОВОЙ - тем же измерением по ВСЕМ
-  дням истории (не только сигнальным)
+Methodology: the two sides are scored SEPARATELY, never blended into one
+number - "crowded longs" (funding_percentile_90d > LONG_THRESHOLD) and
+"crowded shorts" (< SHORT_THRESHOLD). Statistics are computed
+symmetrically, with no assumption about which direction the price
+"should" move: mean, median, volatility (std), and up/down big-move
+frequency, all compared against the same-horizon baseline (all days).
+An earlier version only measured "movement in the hypothesized
+direction," which couldn't distinguish a real reversal from a merely
+calmer market moving the same way, or from volatility simply dropping in
+both directions - hence the full symmetric set here.
 
-ВАЖНАЯ ОГОВОРКА (честно, для протокола): funding rate часто остаётся
-экстремальным несколько дней подряд - соседние сигнальные дни не совсем
-независимы друг от друга, а их окна (особенно на 90/180 дней) сильно
-пересекаются. Для разведочного прогона это допустимо, но при переходе
-к walk-forward-подтверждению эффекта эту зависимость нужно будет учесть
-отдельно.
+Caveat: funding rate often stays extreme for several consecutive days,
+so neighboring signal days aren't fully independent and their forward
+windows overlap heavily (especially at 90/180 days). Acceptable for this
+exploratory pass; addressed separately before walk-forward validation.
 """
 
 import pandas as pd
@@ -63,16 +50,11 @@ def load_data(symbol: str) -> pd.DataFrame:
 
 
 def forward_return(close: pd.Series, horizon: int) -> pd.Series:
-    """Доходность цены через `horizon` дней вперёд от каждой даты, в %."""
     return (close.shift(-horizon) - close) / close * 100
 
 
 def summarize(returns: pd.Series, big_move_pct: float) -> dict:
-    """Полная СИММЕТРИЧНАЯ статистика - без предположения о том, в какую
-    сторону "должно" двигаться. Считаем частоту крупных движений В ОБЕ
-    стороны и волатильность (std) - иначе "крупных падений стало меньше"
-    невозможно отличить от "стало меньше движений вообще" (ниже
-    волатильность) или "стало больше движений вверх" (реальный разворот)."""
+    """Symmetric stats, direction-agnostic - see module docstring for why."""
     returns = returns.dropna()
     if len(returns) == 0:
         return {"n": 0, "mean": None, "median": None, "std": None,
@@ -138,4 +120,3 @@ if __name__ == "__main__":
     pd.set_option("display.max_columns", None)
     print(result.to_string(index=False))
     result.to_csv("h1_backtest_result.csv", index=False)
-    print("\n(сохранено также в h1_backtest_result.csv для удобства просмотра - не в git, воспроизводимо запуском скрипта)")

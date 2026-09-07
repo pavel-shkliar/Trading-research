@@ -1,24 +1,20 @@
 """
-H1b на нескольких монетах (не только BTC) - проверка идеи из чата: если
-закономерность реальна (механика деривативов), она должна проявляться
-не только на одном активе. Используем НОРМАЛИЗОВАННЫЙ порог
-(funding_percentile_90d - свой для каждой монеты, не абсолютное число) -
-это и позволяет сравнивать/объединять разные монеты (см. обсуждение
-в PLAN.md/чате про нормализацию вместо абсолютных порогов).
+H1b across multiple coins, not just BTC - if the pattern reflects real
+derivatives mechanics, it should show up on more than one asset.
+Percentile-normalized thresholds (self-relative per coin) make it
+possible to compare and pool assets directly.
 
-Монеты с историей короче ~400 дней исключены - недостаточно данных для
-осмысленного расчёта (см. download_universe.py - MARSCOINUSDT всего
-7 дней, бесполезно).
+Coins with less than ~400 days of history are excluded as too thin to
+be meaningful (see download_universe.py - MARSCOINUSDT had only 7 days).
 
-Горизонт 90 дней - наш единственный walk-forward-подтверждённый горизонт
-для H1b.
+Horizon: 90 days, the only walk-forward-confirmed horizon for H1b.
 
-Для каждой монеты - своя база (свой рынок, свои условия). Для объединённого
-результата - "избыточная доходность" (episode_return - своя база монеты)
-собирается со всех монет в один общий пул, чтобы увеличить выборку, не
-смешивая монеты с разным общим уровнем доходности напрямую.
+Each coin uses its own baseline. For the pooled result, each episode's
+excess return (episode return minus that coin's own baseline) is combined
+across coins into one sample, growing the effective sample size without
+mixing coins with different overall drift directly.
 
-Запуск:
+Usage:
     python backtest_h1b_multi_symbol.py
 """
 
@@ -38,9 +34,8 @@ SYMBOLS = [
     "HYPEUSDT", "DOGEUSDT", "ARBUSDT", "BNBUSDT",
     "RAYSOLUSDT", "SUIUSDT", "NEARUSDT", "TAOUSDT", "LINKUSDT",
     "WLDUSDT", "UNIUSDT", "PUMPUSDT",
-    # SNDKUSDT, BZUSDT, MARSCOINUSDT исключены (история < 400 дней) -
-    # заменены на давно торгуемые монеты, чтобы снова было 20 в исходном
-    # списке (17 прошли фильтр по истории + эти 3 = 20):
+    # SNDKUSDT, BZUSDT, MARSCOINUSDT excluded (< 400 days) - replaced
+    # with long-established coins to keep the universe at 20:
     "ADAUSDT", "LTCUSDT", "AVAXUSDT",
 ]
 
@@ -67,7 +62,7 @@ if __name__ == "__main__":
     for symbol in SYMBOLS:
         df = load_data(symbol)
         if len(df) < MIN_HISTORY_DAYS:
-            print(f"{symbol}: пропущена, история {len(df)} дней < {MIN_HISTORY_DAYS}")
+            print(f"{symbol}: skipped, {len(df)} days of history < {MIN_HISTORY_DAYS}")
             continue
 
         short_crowded = collapse_to_episodes(df["funding_percentile_90d"] < SHORT_THRESHOLD)
@@ -77,12 +72,11 @@ if __name__ == "__main__":
         baseline_stats = summarize(fwd)
 
         if signal_stats["mean"] is None or baseline_stats["mean"] is None:
-            print(f"{symbol}: недостаточно сигнальных дней для горизонта {HORIZON}")
+            print(f"{symbol}: not enough signal days at horizon {HORIZON}")
             continue
 
         edge_mean = signal_stats["mean"] - baseline_stats["mean"]
 
-        # Избыточная доходность каждого эпизода этой монеты - для объединённого пула
         episode_returns = fwd[short_crowded].dropna()
         excess = (episode_returns - baseline_stats["mean"]).tolist()
         all_excess_returns.extend(excess)
@@ -102,7 +96,7 @@ if __name__ == "__main__":
     print(result.to_string(index=False))
     result.to_csv("h1b_multi_symbol_result.csv", index=False)
 
-    print(f"\n=== Объединённый пул (все монеты вместе) ===")
+    print(f"\n=== Pooled across all coins ===")
     all_excess = np.array(all_excess_returns)
     n_total = len(all_excess)
     mean_excess = all_excess.mean()
@@ -110,7 +104,7 @@ if __name__ == "__main__":
     ci_low, ci_high = mean_excess - 1.96 * se, mean_excess + 1.96 * se
     t_stat, p_value = stats.ttest_1samp(all_excess, 0)
 
-    print(f"Всего эпизодов по всем монетам: {n_total}")
-    print(f"Средняя избыточная доходность (сигнал минус своя база): {mean_excess:.2f}%")
-    print(f"95% доверительный интервал: [{ci_low:.2f}%, {ci_high:.2f}%]")
-    print(f"t-test против нуля: t={t_stat:.2f}, p-value={p_value:.4f}")
+    print(f"Total episodes across all coins: {n_total}")
+    print(f"Mean excess return (signal minus own baseline): {mean_excess:.2f}%")
+    print(f"95% CI: [{ci_low:.2f}%, {ci_high:.2f}%]")
+    print(f"t-test vs zero: t={t_stat:.2f}, p-value={p_value:.4f}")

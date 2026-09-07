@@ -1,23 +1,21 @@
 """
-H5 (см. HYPOTHESES.md): RSI-перепроданность как дополнительное подтверждение
-для H1b (перегруженные шорты -> рост).
+H5 (see HYPOTHESES.md): RSI oversold as additional confirmation for H1b
+(crowded shorts -> rally).
 
-Идея: RSI(14) и funding rate percentile - НЕЗАВИСИМО посчитанные
-индикаторы (один из цены/объёма, другой из ставки финансирования). Если
-оба одновременно показывают "перепроданность" - это два независимых
-голоса за один и тот же вывод, что может быть сильнее, чем один
-индикатор сам по себе (см. PLAN.md - ценность в комбинациях, а не
-в классике по отдельности).
+Idea: RSI(14) and the funding rate percentile are independently computed
+(one from price/volume, the other from the financing rate) - if both
+signal "oversold" at once, that's two independent votes for the same
+conclusion, potentially stronger than either alone (see PLAN.md - value
+in combinations, not classic indicators by themselves).
 
-Порог: RSI_14 < 30 - стандартный учебниковый порог перепроданности
-(сознательно берём готовый порог здесь, а не свой перцентиль - RSI и так
-не даёт эдж сам по себе по PLAN.md, интересна именно комбинация).
+Threshold: RSI_14 < 30, the standard textbook oversold level (used
+as-is here rather than our own percentile - RSI carries no edge on its
+own per PLAN.md, the combination is what's of interest).
 
-Методология - разведочный прогон на всех 7 горизонтах (полный список из
-исходного плана), эпизоды вместо сырых дней (см. чек-лист в HYPOTHESES.md),
-полные абсолютные числа + отдельные Δ-столбцы (не "эдж" одним числом).
+Exploratory pass across all 7 horizons, episodes instead of raw days,
+full absolute numbers plus separate delta columns (not one blended "edge").
 
-Запуск:
+Usage:
     python backtest_h5_rsi_funding.py
 """
 
@@ -62,8 +60,8 @@ if __name__ == "__main__":
         baseline = summarize(fwd)
 
         for label, mask in [
-            ("Funding + RSI оба перепроданы", both_confirm),
-            ("Только funding (RSI не подтверждает)", funding_only),
+            ("Funding + RSI both oversold", both_confirm),
+            ("Funding only (RSI doesn't confirm)", funding_only),
         ]:
             s = summarize(fwd[mask])
             edge_mean = (s["mean"] - baseline["mean"]) if s["mean"] is not None else None

@@ -1,23 +1,20 @@
 """
-H3 (см. HYPOTHESES.md): DVOL как фильтр/подтверждение для H1b.
+H3 (see HYPOTHESES.md): DVOL as a confirmation filter for H1b.
 
-Идея (исходная для всего проекта, PLAN.md) - опционный рынок считается
-более "умным" источником, чем розничная толпа на перпетуалах. Проверяем:
-среди дней, когда сработал сигнал H1b (funding_percentile_90d < 0.05,
-"перегружены шортами"), отличается ли результат в зависимости от того,
-был ли ТАКЖЕ повышен DVOL (опционный рынок тоже видит стресс) или DVOL
-был спокоен (только фьючерсный рынок в стрессе, опционы - нет)?
+The project's original premise: the options market is a "smarter" source
+than the retail crowd on perpetuals. Tested here: among days where H1b's
+signal fires (funding_percentile_90d < 0.05, "crowded shorts"), does the
+outcome differ depending on whether DVOL was ALSO elevated (options
+market also seeing stress) vs calm (only the futures market is stressed)?
 
-Ограничение данных: DVOL существует только с 2021-03-24, а перцентиль
-DVOL считается с окном 90 дней - то есть эта проверка возможна только
-для сигнальных дней ПОСЛЕ 2021-06-21 (когда набралось 90 дней истории
-DVOL). Более ранние сигналы H1b (2019-2021) сюда не попадают - меньше
-данных, чем в исходном H1b.
+Data constraint: DVOL exists only from 2021-03-24, and its percentile
+needs a 90-day window, so this check only applies to H1b signal days
+after 2021-06-21 - a smaller sample than the original H1b.
 
-Порог разделения: DVOL percentile > 0.5 (выше своей медианы за 90 дней) =
-"опционы тоже в стрессе", <= 0.5 = "опционы спокойны".
+Split threshold: DVOL percentile > 0.5 (above its own 90-day median) =
+"options also stressed", <= 0.5 = "options calm".
 
-Запуск:
+Usage:
     python backtest_h3_dvol_filter.py
 """
 
@@ -59,11 +56,11 @@ if __name__ == "__main__":
     rows = []
     for horizon in HORIZONS:
         fwd = forward_return(df["close"], horizon)
-        baseline = summarize(fwd[has_dvol])  # база - тоже только за период, где есть DVOL, для честного сравнения
+        baseline = summarize(fwd[has_dvol])  # baseline restricted to days where DVOL exists too, for a fair comparison
 
         for label, mask in [
-            ("DVOL тоже в стрессе (>0.5)", dvol_stressed),
-            ("DVOL спокоен (<=0.5)", dvol_calm),
+            ("DVOL also stressed (>0.5)", dvol_stressed),
+            ("DVOL calm (<=0.5)", dvol_calm),
         ]:
             s = summarize(fwd[mask])
             edge_mean = (s["mean"] - baseline["mean"]) if s["mean"] is not None else None

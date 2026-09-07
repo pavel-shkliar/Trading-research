@@ -1,13 +1,13 @@
 """
-H4 (см. HYPOTHESES.md): касание полосы Боллинджера -> откат к среднему.
+H4 (see HYPOTHESES.md): Bollinger Band touch -> reversion to the mean.
 
-Классический контроль, как H2 (RSI) - учебниковая идея mean-reversion:
-цена у нижней полосы (перепродано) -> ждём роста к средней линии
-цена у верхней полосы (перекуплено) -> ждём падения к средней линии
+Classic control, same spirit as H2 (RSI):
+price at the lower band (oversold) -> expect a rally back to the midline
+price at the upper band (overbought) -> expect a drop back to the midline
 
-Разведочный прогон на всех 7 горизонтах, эпизоды вместо сырых дней.
+Exploratory pass across all 7 horizons, episodes instead of raw days.
 
-Запуск:
+Usage:
     python backtest_h4_bollinger.py
 """
 
@@ -47,8 +47,8 @@ if __name__ == "__main__":
         baseline = summarize(fwd)
 
         for label, mask in [
-            ("Касание нижней полосы (ждём роста)", touch_lower),
-            ("Касание верхней полосы (ждём падения)", touch_upper),
+            ("Lower band touch (expect rally)", touch_lower),
+            ("Upper band touch (expect drop)", touch_upper),
         ]:
             s = summarize(fwd[mask])
             edge_mean = (s["mean"] - baseline["mean"]) if s["mean"] is not None else None

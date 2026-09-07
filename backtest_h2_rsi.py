@@ -1,20 +1,20 @@
 """
-H2 (см. HYPOTHESES.md): RSI-экстремум сам по себе -> откат цены.
+H2 (see HYPOTHESES.md): RSI extreme alone -> price reversal.
 
-Классический учебниковый индикатор, порог 30/70 - не наш собственный
-перцентиль, а стандартный (сознательно: цель здесь - контрольная проверка,
-работает ли вообще что-то настолько общеизвестное на BTC, а не искать
-свой оптимальный порог). Согласно PLAN.md, ожидаем слабый или нулевой
-эффект - если метод честный, он должен уметь показать "тут ничего нет"
-так же уверенно, как показал что-то в H1b.
+Classic textbook indicator, standard 30/70 thresholds (deliberately not
+our own percentile - this is a sanity check on whether something this
+well-known works at all on BTC, not a search for an optimal threshold).
+Per PLAN.md, a weak or null result is expected here - a trustworthy
+method should be able to show "nothing here" as confidently as it found
+something in H1b.
 
-RSI < 30 (перепродано) -> ждём РОСТА
-RSI > 70 (перекуплено) -> ждём ПАДЕНИЯ
+RSI < 30 (oversold) -> expect a RALLY
+RSI > 70 (overbought) -> expect a DROP
 
-Разведочный прогон на всех 7 горизонтах, эпизоды вместо сырых дней,
-полные абсолютные числа (не только "эдж").
+Exploratory pass across all 7 horizons, episodes instead of raw days,
+full absolute numbers (not just the edge).
 
-Запуск:
+Usage:
     python backtest_h2_rsi.py
 """
 
@@ -56,8 +56,8 @@ if __name__ == "__main__":
         baseline = summarize(fwd)
 
         for label, mask in [
-            ("RSI < 30 (перепродано, ждём роста)", oversold),
-            ("RSI > 70 (перекуплено, ждём падения)", overbought),
+            ("RSI < 30 (oversold, expect rally)", oversold),
+            ("RSI > 70 (overbought, expect drop)", overbought),
         ]:
             s = summarize(fwd[mask])
             edge_mean = (s["mean"] - baseline["mean"]) if s["mean"] is not None else None
