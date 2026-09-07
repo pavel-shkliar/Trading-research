@@ -24,7 +24,7 @@ DVOL). Более ранние сигналы H1b (2019-2021) сюда не по
 import pandas as pd
 
 from db import read_df
-from walkforward_common import forward_return, summarize
+from walkforward_common import collapse_to_episodes, forward_return, summarize
 
 SYMBOL = "BTCUSDT"
 SHORT_THRESHOLD = 0.05
@@ -53,8 +53,8 @@ if __name__ == "__main__":
     short_crowded = df["funding_percentile_90d"] < SHORT_THRESHOLD
     has_dvol = df["dvol_percentile_90d"].notna()
 
-    dvol_stressed = short_crowded & has_dvol & (df["dvol_percentile_90d"] > DVOL_SPLIT)
-    dvol_calm = short_crowded & has_dvol & (df["dvol_percentile_90d"] <= DVOL_SPLIT)
+    dvol_stressed = collapse_to_episodes(short_crowded & has_dvol & (df["dvol_percentile_90d"] > DVOL_SPLIT))
+    dvol_calm = collapse_to_episodes(short_crowded & has_dvol & (df["dvol_percentile_90d"] <= DVOL_SPLIT))
 
     rows = []
     for horizon in HORIZONS:

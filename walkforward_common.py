@@ -40,6 +40,32 @@ def forward_return(close: pd.Series, horizon: int) -> pd.Series:
     return (close.shift(-horizon) - close) / close * 100
 
 
+def collapse_to_episodes(mask: pd.Series) -> pd.Series:
+    """Возвращает булеву маску той же длины, где True стоит только в ПЕРВЫЙ
+    день каждого непрерывного эпизода сигнала - соседние дни одного и того
+    же стресса схлопываются в одно событие.
+
+    Зачем (обсуждали в чате): 90-дневные окна доходности для двух соседних
+    дней одного эпизода почти целиком пересекаются (отличаются на 1-2 дня
+    из 90) - это физически одно и то же движение цены, посчитанное
+    несколько раз. Без схлопывания n искусственно завышается, доверительные
+    интервалы/p-value становятся обманчиво "увереннее", чем есть на самом
+    деле. Требует, чтобы mask.index был простым диапазоном 0..N-1
+    (последовательные дни без пропусков) - иначе "соседние по индексу"
+    не будет значить "соседние по дате"."""
+    idx = pd.Series(mask.index[mask])
+    if len(idx) == 0:
+        return mask & False
+
+    gaps = idx.diff()
+    is_new_episode = (gaps != 1) | gaps.isna()
+    first_of_episode = idx[is_new_episode.values]
+
+    result = pd.Series(False, index=mask.index)
+    result.loc[first_of_episode] = True
+    return result
+
+
 def summarize(returns: pd.Series, big_move_pct: float = BIG_MOVE_PCT) -> dict:
     returns = returns.dropna()
     if len(returns) == 0:
@@ -55,7 +81,13 @@ def summarize(returns: pd.Series, big_move_pct: float = BIG_MOVE_PCT) -> dict:
 def run_walkforward(symbol: str, signal_mask: pd.Series, horizons: list, df: pd.DataFrame) -> pd.DataFrame:
     """signal_mask - булева серия той же длины и с тем же индексом, что df,
     True в дни, когда сигнал сработал. База считается отдельно для каждого
-    периода - по ВСЕМ дням этого периода, не только сигнальным."""
+    периода - по ВСЕМ дням этого периода, не только сигнальным.
+
+    Сигнальные дни схлопываются в независимые эпизоды ГЛОБАЛЬНО (по всей
+    истории, до разбивки на периоды) - иначе эпизод, случайно попавший на
+    границу периодов, схлопнулся бы неправильно."""
+    episode_mask = collapse_to_episodes(signal_mask)
+
     rows = []
     for horizon in horizons:
         fwd = forward_return(df["close"], horizon)
@@ -63,7 +95,7 @@ def run_walkforward(symbol: str, signal_mask: pd.Series, horizons: list, df: pd.
         for start, end, label in PERIODS:
             period_mask = (df["date"] >= pd.Timestamp(start, tz="UTC")) & (df["date"] < pd.Timestamp(end, tz="UTC"))
 
-            sig_stats = summarize(fwd[period_mask & signal_mask])
+            sig_stats = summarize(fwd[period_mask & episode_mask])
             base_stats = summarize(fwd[period_mask])
 
             edge_mean = edge_big_up = None
