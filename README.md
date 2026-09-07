@@ -4,6 +4,21 @@ A systematic study of whether crowd positioning in crypto derivatives markets �
 
 This is a learning project: the goal was to build real data engineering and quantitative research skills, not to produce a trading strategy. The most interesting result turned out to be about methodology as much as markets — see [Finding 3](#finding-3-the-process-caught-its-own-false-positives) below.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Binance Futures API] -->|candles, funding rate,<br/>OI, long/short ratio,<br/>taker volume| D[(Postgres)]
+    B[Binance Spot API] -->|spot candles| D
+    C[Deribit API] -->|DVOL| D
+    D --> E[compute_indicators.py<br/>RSI, Bollinger, VWAP,<br/>percentiles, OI divergence]
+    E --> D
+    D --> F[walkforward_common.py<br/>episode collapsing,<br/>period splitting]
+    F --> G[backtest_h*.py<br/>one script per hypothesis]
+    G --> H[HYPOTHESES.md<br/>full log incl. rejections]
+    I[Windows Task Scheduler] -->|daily| A
+```
+
 ## Data
 
 | Source | Metrics | Coverage |
@@ -34,11 +49,19 @@ When Deribit's DVOL (options-implied volatility) sits in the bottom 5% of its ow
 - **Significance**: BTC t-test p=0.0086, Mann-Whitney p=0.0017; ETH t-test p=0.0114, Mann-Whitney p=0.0016
 - **Mechanism**: the underperformance builds gradually across the full 60-day window rather than arriving as a single sharp move — the signal asset fails to keep pace with the broader market's drift rather than crashing outright
 
+![Forward-return distribution after the DVOL-low signal vs baseline, BTC and ETH](charts/dvol_distribution.png)
+
+![Walk-forward edge by year for BTC and ETH — every bar negative, confirming the signal](charts/walkforward_consistency.png)
+
+*Both charts are generated from live data by [`generate_charts.py`](generate_charts.py) — re-running it reproduces them.*
+
 ### Finding 2: an unexplained Wednesday effect
 
 Buying at the open and selling at the close on Wednesdays produces a meaningfully higher return than any other day of the week, on both BTC (p=0.046) and ETH (p=0.043), holding up in walk-forward (5/6 and 6/6 periods respectively) and confirmed by the median as well as the mean — not a handful of outlier days.
 
-No causal explanation was found. FOMC announcements land on Wednesdays but cover only ~15% of all Wednesdays in the sample, too small a share to account for a pattern this broad. Logged as a real but currently unexplained anomaly, in the same category as the historically documented (and still not fully explained) "Monday effect" in equities — flagged, not acted on.
+No causal explanation was found. FOMC announcements land on Wednesdays but cover only ~15% of all Wednesdays in the sample, too small a share to account for a pattern this broad. Logged as a real but currently unexplained anomaly, in the same category as the historically documented (and still not fully explained) "Monday effect" in equities.
+
+> ⚠️ **Not a trading signal.** A statistically robust pattern with no causal mechanism is exactly the kind of thing multiple-comparisons noise can produce (see [HYPOTHESES.md](HYPOTHESES.md) for the full scanning methodology and caveat). It's included here as an honestly-reported open question, not a recommendation.
 
 ### Finding 3: the process caught its own false positives
 
@@ -87,4 +110,4 @@ python backtest_h6b_walkforward.py   # the strongest result
 
 ## Stack
 
-Python, pandas, scipy, PostgreSQL (Docker), Binance Futures & Spot APIs, Deribit API, Windows Task Scheduler for automated collection.
+Python, pandas, scipy, matplotlib, PostgreSQL (Docker), Binance Futures & Spot APIs, Deribit API, Windows Task Scheduler for automated collection.
