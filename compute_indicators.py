@@ -130,9 +130,12 @@ def build_indicators(symbol: str) -> pd.DataFrame:
     # DVOL - "температура" опционного рынка (см. PLAN.md, "фильтр умного
     # рынка"). История доступна только с 2021-03-24 (раньше индекс не
     # существовал) - для более ранних дат тут будут NULL, это ожидаемо,
-    # не баг.
+    # не баг. DVOL на Deribit есть только для BTC и ETH - для остальных
+    # монет currency ничего не найдёт, и dvol будет пустым (тоже не баг).
+    dvol_currency = symbol.replace("USDT", "")
     dvol = read_df(
-        "SELECT ts, close FROM dvol WHERE currency = 'BTC' ORDER BY ts",
+        "SELECT ts, close FROM dvol WHERE currency = %(currency)s ORDER BY ts",
+        params={"currency": dvol_currency},
     )
     if not dvol.empty:
         dvol["date"] = pd.to_datetime(dvol["ts"], utc=True).dt.normalize()
