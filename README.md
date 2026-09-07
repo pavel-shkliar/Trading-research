@@ -55,13 +55,13 @@ When Deribit's DVOL (options-implied volatility) sits in the bottom 5% of its ow
 
 *Both charts are generated from live data by [`generate_charts.py`](generate_charts.py) — re-running it reproduces them.*
 
-### Finding 2: an unexplained Wednesday effect
+### Finding 2: a pattern that evaporated under scrutiny
 
-Buying at the open and selling at the close on Wednesdays produces a meaningfully higher return than any other day of the week, on both BTC (p=0.046) and ETH (p=0.043), holding up in walk-forward (5/6 and 6/6 periods respectively) and confirmed by the median as well as the mean — not a handful of outlier days.
+Buying at the open and selling at the close on Wednesdays looked like a real pattern at first: significant on both BTC and ETH (p=0.046, p=0.043), holding up across most tested years, confirmed by the median as well as the mean — not a couple of outlier days.
 
-No causal explanation was found. FOMC announcements land on Wednesdays but cover only ~15% of all Wednesdays in the sample, too small a share to account for a pattern this broad. Logged as a real but currently unexplained anomaly, in the same category as the historically documented (and still not fully explained) "Monday effect" in equities.
+Then it was tested on the other 18 coins in the dataset. Only 3 of 20 assets showed a significant, positive Wednesday effect — about what pure chance produces when scanning 7 candidate days across many assets. The academic literature on crypto "day-of-week effects" shows the same instability: different studies find different "special" days (mostly Monday, not Wednesday) on overlapping data. With enough days and assets to choose from, someone always finds theirs.
 
-> ⚠️ **Not a trading signal.** A statistically robust pattern with no causal mechanism is exactly the kind of thing multiple-comparisons noise can produce (see [HYPOTHESES.md](HYPOTHESES.md) for the full scanning methodology and caveat). It's included here as an honestly-reported open question, not a recommendation.
+> ⚠️ **Not a trading signal.** Downgraded from "unexplained anomaly" to "likely multiple-comparisons noise" once tested broadly — logged either way in [HYPOTHESES.md](HYPOTHESES.md), including the FOMC-timing check that was run before the wider test made it moot.
 
 ### Finding 3: the process caught its own false positives
 
