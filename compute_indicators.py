@@ -1,30 +1,22 @@
 """
-Шаг 4 плана — считает индикаторы на основе уже скачанных данных
-и сохраняет результат в таблицу indicators.
+Computes indicators from already-downloaded data and stores them in the
+indicators table:
 
-Что считаем и зачем (см. PLAN.md):
-- RSI(14), Bollinger Bands(20, 2 std), rolling VWAP(20) — классика,
-  считаем их не потому что сами по себе дадут эдж, а как строительные
-  блоки для будущих комбинаций
-- Перцентиль funding rate за последние 90 дней — НЕ абсолютное значение,
-  а "насколько текущий funding экстремален относительно своей же недавней
-  истории" (см. обсуждение в PLAN.md про нормализацию вместо готовых
-  учебниковых порогов)
-- Дивергенция цена/Open Interest — 4 комбинации знака изменения цены
-  и изменения OI (новые лонги / шорт-каверинг / новые шорты /
-  закрытие-ликвидация лонгов). Доступно только там, где есть история OI
-  (сейчас — последние ~30 дней, будет расти с каждым днём автосбора)
+- RSI(14), Bollinger Bands(20, 2 std), rolling VWAP(20) - classic
+  price/volume indicators, kept as building blocks for combinations
+  rather than expected to carry an edge on their own.
+- 90-day rolling percentile of funding rate - NOT an absolute threshold,
+  but how extreme the current value is relative to its own recent
+  history (self-relative normalization, comparable across assets).
+- Price/Open Interest divergence - the four sign combinations of price
+  change vs OI change. Only available where OI history exists.
 
-ВАЖНО про перцентиль funding rate — без забегания вперёд (look-ahead bias):
-перцентиль на каждую дату считается ТОЛЬКО по предыдущим 90 дням
-(rolling-окно), а не по всей истории целиком. Если бы мы взяли перцентиль
-относительно всей истории сразу — на дату из 2020 года "просочилась" бы
-информация о будущих (2024-2026) значениях funding rate, которых тогда
-ещё не существовало. Это классическая ошибка при подготовке данных для
-бэктеста — сигнал "видел бы будущее", результат бэктеста был бы обманчиво
-хорошим и не воспроизводился бы в реальной торговле.
+Percentile computation uses a TRAILING window only (never the full
+history at once) to avoid look-ahead bias: a percentile computed against
+the entire dataset would leak future values into past dates, producing
+a backtest that looks good but wouldn't reproduce in live trading.
 
-Запуск:
+Usage:
     python compute_indicators.py
 """
 
@@ -40,12 +32,11 @@ RSI_PERIOD = 14
 BB_PERIOD = 20
 BB_STD = 2
 VWAP_PERIOD = 20
-FUNDING_PERCENTILE_WINDOW = 90  # дней
+FUNDING_PERCENTILE_WINDOW = 90
 
 
 def compute_rsi(close: pd.Series, period: int) -> pd.Series:
-    """RSI по методу Уайлдера (Wilder's smoothing - экспоненциальное
-    сглаживание с alpha = 1/period, стандарт для RSI)."""
+    """Wilder's RSI (exponential smoothing with alpha = 1/period)."""
     delta = close.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
@@ -66,24 +57,19 @@ def compute_bollinger(close: pd.Series, period: int, num_std: float):
 
 
 def compute_vwap(close: pd.Series, volume: pd.Series, period: int) -> pd.Series:
-    """Классический VWAP считается ВНУТРИ одного дня по тиковым сделкам.
-    У нас только дневные свечи, поэтому используем адаптацию - "скользящий
-    VWAP" за последние period дней: средняя цена, взвешенная по объёму
-    за это окно, а не по количеству дней."""
+    """Classic VWAP is intraday, tick-by-tick. With only daily candles we
+    use a rolling adaptation instead: volume-weighted average price over
+    the trailing `period` days."""
     return (close * volume).rolling(period).sum() / volume.rolling(period).sum()
 
 
 def compute_rolling_percentile(series: pd.Series, window: int) -> pd.Series:
-    """Для каждого дня - на каком перцентиле относительно ПРЕДЫДУЩИХ
-    `window` дней находится сегодняшнее значение. rank(pct=True) внутри
-    rolling-окна даёт перцентиль последнего значения окна относительно
-    самого окна - без заглядывания в данные позже текущей даты. Используется
-    и для funding rate, и для DVOL - одна и та же логика нормализации."""
+    """Percentile of each value relative to the PRECEDING `window`
+    observations only - no look-ahead. Shared by funding rate and DVOL."""
     return series.rolling(window).apply(lambda x: x.rank(pct=True).iloc[-1], raw=False)
 
 
 def classify_price_oi_divergence(price_change: float, oi_change: float) -> str:
-    """4 классических комбинации цена/OI - см. PLAN.md."""
     if pd.isna(price_change) or pd.isna(oi_change):
         return None
     if price_change > 0 and oi_change > 0:
@@ -96,7 +82,6 @@ def classify_price_oi_divergence(price_change: float, oi_change: float) -> str:
 
 
 def build_indicators(symbol: str) -> pd.DataFrame:
-    # --- Цена/объём -> RSI, Bollinger, VWAP ---
     candles = read_df(
         "SELECT open_time AS date, close, volume FROM candles WHERE symbol = %(symbol)s ORDER BY open_time",
         params={"symbol": symbol},
@@ -110,7 +95,6 @@ def build_indicators(symbol: str) -> pd.DataFrame:
     )
     result["vwap_20"] = compute_vwap(candles["close"], candles["volume"], VWAP_PERIOD)
 
-    # --- Funding rate -> дневное среднее + перцентиль ---
     funding = read_df(
         "SELECT funding_time, funding_rate FROM funding_rate WHERE symbol = %(symbol)s ORDER BY funding_time",
         params={"symbol": symbol},
@@ -119,19 +103,11 @@ def build_indicators(symbol: str) -> pd.DataFrame:
     funding_daily = funding.groupby("date")["funding_rate"].mean()
     funding_percentile = compute_rolling_percentile(funding_daily, FUNDING_PERCENTILE_WINDOW)
 
-    result = result.merge(
-        funding_daily.rename("funding_rate_daily_avg"), on="date", how="left"
-    )
-    result = result.merge(
-        funding_percentile.rename("funding_percentile_90d"), on="date", how="left"
-    )
+    result = result.merge(funding_daily.rename("funding_rate_daily_avg"), on="date", how="left")
+    result = result.merge(funding_percentile.rename("funding_percentile_90d"), on="date", how="left")
 
-    # --- DVOL (Deribit) -> перцентиль той же логикой, что funding rate ---
-    # DVOL - "температура" опционного рынка (см. PLAN.md, "фильтр умного
-    # рынка"). История доступна только с 2021-03-24 (раньше индекс не
-    # существовал) - для более ранних дат тут будут NULL, это ожидаемо,
-    # не баг. DVOL на Deribit есть только для BTC и ETH - для остальных
-    # монет currency ничего не найдёт, и dvol будет пустым (тоже не баг).
+    # DVOL exists only from 2021-03-24 onward, and only for BTC and ETH on
+    # Deribit - NULLs elsewhere are expected, not a bug.
     dvol_currency = symbol.replace("USDT", "")
     dvol = read_df(
         "SELECT ts, close FROM dvol WHERE currency = %(currency)s ORDER BY ts",
@@ -148,7 +124,6 @@ def build_indicators(symbol: str) -> pd.DataFrame:
         result["dvol_close"] = None
         result["dvol_percentile_90d"] = None
 
-    # --- Open Interest -> дивергенция с ценой (доступно только там, где есть история OI) ---
     oi = read_df(
         "SELECT ts AS date, sum_open_interest FROM open_interest WHERE symbol = %(symbol)s ORDER BY ts",
         params={"symbol": symbol},
@@ -167,9 +142,7 @@ def build_indicators(symbol: str) -> pd.DataFrame:
             for p, o in zip(oi["price_change_pct"], oi["oi_change_pct"])
         ]
 
-        result = result.merge(
-            oi[["date", "oi_change_pct", "price_oi_divergence"]], on="date", how="left"
-        )
+        result = result.merge(oi[["date", "oi_change_pct", "price_oi_divergence"]], on="date", how="left")
     else:
         result["oi_change_pct"] = None
         result["price_oi_divergence"] = None
@@ -179,14 +152,11 @@ def build_indicators(symbol: str) -> pd.DataFrame:
 
 
 def _nan_to_none(value):
-    """pandas хранит "пропуск" как float NaN даже в колонках, где мы явно
-    просим None - float64-колонка в pandas физически не может держать
-    Python None, он молча превращается обратно в NaN. Проблема в том, что
-    psycopg2 отправит такой NaN в Postgres как ЗНАЧЕНИЕ 'NaN'::float8
-    (Postgres умеет такое хранить!), а не как SQL NULL - это ломает
-    COUNT()/AVG() и подобные запросы, которые должны эти дни игнорировать.
-    Поэтому явно подменяем NaN на None в момент сборки строк для вставки,
-    когда данные уже не в pandas, а в обычных Python-кортежах."""
+    """pandas keeps a float64 column's gaps as NaN even when None is
+    assigned - it silently coerces back. psycopg2 would then send that NaN
+    to Postgres as the literal value 'NaN'::float8 (a valid float value
+    there) rather than SQL NULL, breaking COUNT()/AVG() downstream. Convert
+    at row-tuple assembly time, once pandas can no longer undo it."""
     if isinstance(value, float) and math.isnan(value):
         return None
     return value
@@ -207,7 +177,7 @@ def save_indicators(df: pd.DataFrame) -> int:
 
 
 if __name__ == "__main__":
-    print(f"Считаю индикаторы для {SYMBOL}...")
+    print(f"Computing indicators for {SYMBOL}...")
     df = build_indicators(SYMBOL)
     saved = save_indicators(df)
-    print(f"Готово: обработано {saved} строк индикаторов ({df['date'].min().date()} - {df['date'].max().date()}).")
+    print(f"Done: {saved} indicator rows processed ({df['date'].min().date()} - {df['date'].max().date()}).")

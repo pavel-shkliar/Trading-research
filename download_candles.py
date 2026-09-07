@@ -1,10 +1,10 @@
 """
-Скачивает дневные свечи (OHLCV) с Binance Futures и сохраняет в таблицу
-candles в Postgres. Инкрементально — качает только то, чего ещё нет.
+Downloads daily candles (OHLCV) from Binance Futures into the candles
+table. Incremental - only fetches what isn't already saved.
 
-Запуск:
-    python download_candles.py --days 5     (короткий тест)
-    python download_candles.py --days 2600  (максимум истории, с 2019 года)
+Usage:
+    python download_candles.py --days 5     (quick smoke test)
+    python download_candles.py --days 2600  (full history since 2019)
 """
 
 import argparse
@@ -16,7 +16,7 @@ from db import get_saved_range, upsert_rows
 
 SYMBOL = "BTCUSDT"
 INTERVAL = "1d"
-LIMIT = 1500  # максимум свечей за один запрос к Binance
+LIMIT = 1500  # max candles per Binance request
 
 
 def fetch_klines(symbol: str, start_ms: int, end_ms: int) -> list:
@@ -30,8 +30,8 @@ def fetch_klines(symbol: str, start_ms: int, end_ms: int) -> list:
 
 
 def _download_period(symbol: str, start_ms: int, end_ms: int) -> int:
-    """Качает и сохраняет один непрерывный период [start_ms, end_ms],
-    постранично (несколько запросов, если период большой)."""
+    """Fetches and saves one contiguous [start_ms, end_ms] period,
+    paginating across multiple requests if needed."""
     total = 0
     current_start = start_ms
     while current_start < end_ms:
@@ -67,18 +67,15 @@ def download(symbol: str, days_back: int) -> int:
     end_dt = datetime.now(timezone.utc)
     requested_start = end_dt - timedelta(days=days_back)
 
-    # Смотрим, что уже есть в базе, и докачиваем ОБА недостающих куска:
-    # более старую историю (если раньше скачали только недавний тестовый
-    # кусок) и более новую (обычное инкрементальное обновление). Без этого
-    # разделения, если один раз скачать только "последние 5 дней" для теста,
-    # а потом попросить "последние 730 дней" — старая история за пределами
-    # уже сохранённого окна никогда не докачается, потому что код будет
-    # смотреть только "после последней сохранённой даты".
+    # Backfill BOTH missing ends: older history (if only a recent test
+    # window was fetched before) and newer history (the normal incremental
+    # case). Without this, a one-off "last 5 days" test run followed by a
+    # "last 730 days" request would never backfill the older gap, since a
+    # naive incremental check only looks forward from the latest saved date.
     existing_min, existing_max = get_saved_range("candles", "open_time", "symbol", symbol)
 
     total = 0
     if existing_min is None:
-        # Данных вообще нет - качаем весь запрошенный период целиком.
         total += _download_period(symbol, int(requested_start.timestamp() * 1000), int(end_dt.timestamp() * 1000))
     else:
         if requested_start < existing_min:
@@ -100,6 +97,6 @@ if __name__ == "__main__":
     parser.add_argument("--symbol", default=SYMBOL)
     args = parser.parse_args()
 
-    print(f"Скачиваю свечи {args.symbol} за последние {args.days} дней...")
+    print(f"Downloading {args.symbol} candles for the last {args.days} days...")
     saved = download(args.symbol, args.days)
-    print(f"Готово: обработано {saved} свечей.")
+    print(f"Done: {saved} candles processed.")

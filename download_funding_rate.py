@@ -1,13 +1,13 @@
 """
-Скачивает funding rate (ставку финансирования перпетуального фьючерса,
-платится раз в 8 часов) с Binance Futures в таблицу funding_rate.
+Downloads funding rate (perpetual futures financing rate, paid every 8
+hours) from Binance Futures into the funding_rate table.
 
-Экстремальные значения (относительно СВОЕЙ ЖЕ истории — это считается
-на шаге индикаторов, не здесь) — признак перегретой позиции толпы.
+Extreme values relative to the symbol's own history (computed at the
+indicators stage, not here) are a proxy for crowded positioning.
 
-Запуск:
+Usage:
     python download_funding_rate.py --days 5
-    python download_funding_rate.py --days 2600  (максимум истории, с 2019 года)
+    python download_funding_rate.py --days 2600  (full history since 2019)
 """
 
 import argparse
@@ -61,8 +61,7 @@ def download(symbol: str, days_back: int) -> int:
     end_dt = datetime.now(timezone.utc)
     requested_start = end_dt - timedelta(days=days_back)
 
-    # См. подробный комментарий в download_candles.py - докачиваем и более
-    # старую историю (если раньше был только тестовый кусок), и более новую.
+    # Backfill both ends - see the comment in download_candles.py.
     existing_min, existing_max = get_saved_range("funding_rate", "funding_time", "symbol", symbol)
 
     total = 0
@@ -88,6 +87,6 @@ if __name__ == "__main__":
     parser.add_argument("--symbol", default=SYMBOL)
     args = parser.parse_args()
 
-    print(f"Скачиваю funding rate {args.symbol} за последние {args.days} дней...")
+    print(f"Downloading {args.symbol} funding rate for the last {args.days} days...")
     saved = download(args.symbol, args.days)
-    print(f"Готово: обработано {saved} записей funding rate.")
+    print(f"Done: {saved} funding rate records processed.")

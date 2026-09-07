@@ -1,15 +1,10 @@
 """
-Скачивает DVOL (индекс подразумеваемой волатильности опционов на Deribit,
-аналог VIX) в таблицу dvol.
+Downloads DVOL (Deribit's options-implied volatility index, analogous to
+VIX) into the dvol table.
 
-DVOL — "фильтр умного рынка" (см. PLAN.md): если фьючерсный рынок выглядит
-перегретым (funding rate экстремальный, OI растёт), а DVOL остаётся
-спокойным — движение может быть менее устойчивым (чисто на плече, без
-подтверждения опционным рынком).
-
-Запуск:
+Usage:
     python download_dvol.py --days 5
-    python download_dvol.py --days 2600  (Deribit просто вернёт пусто до 2021 года, когда DVOL появился)
+    python download_dvol.py --days 2600  (Deribit returns empty before 2021, when DVOL launched)
 """
 
 import argparse
@@ -19,8 +14,8 @@ from deribit_api import get
 from db import get_saved_range, upsert_rows
 
 CURRENCY = "BTC"
-RESOLUTION = 86400  # размер свечи индекса в секундах (86400 = 1 день)
-CHUNK_DAYS = 80      # запрашиваем историю кусками, чтобы не упереться в лимиты Deribit за один запрос
+RESOLUTION = 86400  # index candle size in seconds (1 day)
+CHUNK_DAYS = 80      # fetch history in chunks to stay under Deribit's per-request limits
 
 
 def fetch_chunk(currency: str, start_ms: int, end_ms: int) -> list:
@@ -34,7 +29,7 @@ def fetch_chunk(currency: str, start_ms: int, end_ms: int) -> list:
 
 
 def _download_period(currency: str, period_start: datetime, period_end: datetime) -> int:
-    """Качает один непрерывный период кусками по CHUNK_DAYS дней."""
+    """Fetches one contiguous period in CHUNK_DAYS-sized chunks."""
     total = 0
     chunk_start = period_start
     while chunk_start < period_end:
@@ -46,7 +41,7 @@ def _download_period(currency: str, period_start: datetime, period_end: datetime
             int(chunk_end.timestamp() * 1000),
         )
 
-        # Каждая точка — [timestamp_ms, open, high, low, close]
+        # Each point is [timestamp_ms, open, high, low, close]
         rows = [
             (
                 currency,
@@ -71,7 +66,7 @@ def download(currency: str, days_back: int) -> int:
     end_dt = datetime.now(timezone.utc)
     requested_start = end_dt - timedelta(days=days_back)
 
-    # См. подробный комментарий в download_candles.py.
+    # Backfill both ends - see the comment in download_candles.py.
     existing_min, existing_max = get_saved_range("dvol", "ts", "currency", currency)
 
     total = 0
@@ -93,6 +88,6 @@ if __name__ == "__main__":
     parser.add_argument("--currency", default=CURRENCY)
     args = parser.parse_args()
 
-    print(f"Скачиваю DVOL {args.currency} за последние {args.days} дней...")
+    print(f"Downloading {args.currency} DVOL for the last {args.days} days...")
     saved = download(args.currency, args.days)
-    print(f"Готово: обработано {saved} записей DVOL.")
+    print(f"Done: {saved} DVOL records processed.")

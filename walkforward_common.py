@@ -1,7 +1,6 @@
 """
-Общие функции для walk-forward проверок (используется backtest_h1b_walkforward.py
-и backtest_h1c_walkforward.py) - чтобы не дублировать одну и ту же логику
-разбивки на периоды и расчёта статистики для каждой новой гипотезы.
+Shared walk-forward machinery: period splitting, episode collapsing, and
+forward-return statistics, reused by every hypothesis's backtest script.
 """
 
 import pandas as pd
@@ -10,14 +9,14 @@ from db import read_df
 
 BIG_MOVE_PCT = 5.0
 
-# Периоды по годам - захватывают разные известные режимы рынка BTC.
+# Yearly periods chosen to span distinct BTC market regimes.
 PERIODS = [
-    ("2019-09-08", "2021-01-01", "2019-2020 (COVID-крах и восстановление)"),
-    ("2021-01-01", "2022-01-01", "2021 (бычий, затем коррекция)"),
-    ("2022-01-01", "2023-01-01", "2022 (медвежий - крах Luna/FTX)"),
-    ("2023-01-01", "2024-01-01", "2023 (восстановление)"),
-    ("2024-01-01", "2025-01-01", "2024 (ETF-ралли)"),
-    ("2025-01-01", "2026-09-07", "2025-2026 (последний период)"),
+    ("2019-09-08", "2021-01-01", "2019-2020 (COVID crash and recovery)"),
+    ("2021-01-01", "2022-01-01", "2021 (bull, then correction)"),
+    ("2022-01-01", "2023-01-01", "2022 (bear - Luna/FTX collapse)"),
+    ("2023-01-01", "2024-01-01", "2023 (recovery)"),
+    ("2024-01-01", "2025-01-01", "2024 (ETF rally)"),
+    ("2025-01-01", "2026-09-07", "2025-2026 (latest period)"),
 ]
 
 
@@ -41,18 +40,15 @@ def forward_return(close: pd.Series, horizon: int) -> pd.Series:
 
 
 def collapse_to_episodes(mask: pd.Series) -> pd.Series:
-    """Возвращает булеву маску той же длины, где True стоит только в ПЕРВЫЙ
-    день каждого непрерывного эпизода сигнала - соседние дни одного и того
-    же стресса схлопываются в одно событие.
+    """Keep only the first day of each run of consecutive True values.
 
-    Зачем (обсуждали в чате): 90-дневные окна доходности для двух соседних
-    дней одного эпизода почти целиком пересекаются (отличаются на 1-2 дня
-    из 90) - это физически одно и то же движение цены, посчитанное
-    несколько раз. Без схлопывания n искусственно завышается, доверительные
-    интервалы/p-value становятся обманчиво "увереннее", чем есть на самом
-    деле. Требует, чтобы mask.index был простым диапазоном 0..N-1
-    (последовательные дни без пропусков) - иначе "соседние по индексу"
-    не будет значить "соседние по дате"."""
+    Two consecutive signal days have forward-return windows that overlap
+    almost entirely (a 90-day window is unchanged by a 1-day shift) - they
+    are the same price move counted twice, not two independent
+    observations. Left uncollapsed, sample size is inflated and confidence
+    intervals/p-values look far more certain than they are. Requires
+    mask.index to be a plain 0..N-1 range so "adjacent by index" implies
+    "adjacent by date"."""
     idx = pd.Series(mask.index[mask])
     if len(idx) == 0:
         return mask & False
@@ -79,13 +75,13 @@ def summarize(returns: pd.Series, big_move_pct: float = BIG_MOVE_PCT) -> dict:
 
 
 def run_walkforward(symbol: str, signal_mask: pd.Series, horizons: list, df: pd.DataFrame) -> pd.DataFrame:
-    """signal_mask - булева серия той же длины и с тем же индексом, что df,
-    True в дни, когда сигнал сработал. База считается отдельно для каждого
-    периода - по ВСЕМ дням этого периода, не только сигнальным.
+    """signal_mask: boolean series aligned with df, True on signal days.
+    The baseline is computed per period over ALL days in that period, not
+    just signal days.
 
-    Сигнальные дни схлопываются в независимые эпизоды ГЛОБАЛЬНО (по всей
-    истории, до разбивки на периоды) - иначе эпизод, случайно попавший на
-    границу периодов, схлопнулся бы неправильно."""
+    Episodes are collapsed globally (across the whole history) before
+    splitting into periods, so an episode straddling a period boundary
+    isn't collapsed incorrectly."""
     episode_mask = collapse_to_episodes(signal_mask)
 
     rows = []

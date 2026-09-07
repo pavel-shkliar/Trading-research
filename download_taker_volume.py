@@ -1,14 +1,12 @@
 """
-Скачивает Taker Buy/Sell Volume Ratio с Binance Futures — соотношение
-объёма агрессивных покупок к агрессивным продажам (маркет-ордерами).
+Downloads Taker Buy/Sell Volume Ratio from Binance Futures - the ratio of
+aggressive (market-order) buy volume to sell volume.
 
-Показывает текущее давление потока ордеров прямо сейчас — не путать
-с long/short ratio (это про уже открытые позиции).
+Reflects current order-flow pressure, distinct from long/short ratio
+(which is about already-open positions). Same 30-day history limit as
+Open Interest / Long-Short Ratio.
 
-ВАЖНО: как и с Open Interest/Long-Short Ratio, история у этого эндпоинта
-хранится Binance максимум ~30 дней.
-
-Запуск:
+Usage:
     python download_taker_volume.py --days 5
     python download_taker_volume.py --days 30
 """
@@ -72,7 +70,7 @@ def download(symbol: str, days_back: int) -> int:
     end_dt = datetime.now(timezone.utc)
     requested_start = end_dt - timedelta(days=days_back)
 
-    # См. подробный комментарий в download_candles.py.
+    # Backfill both ends - see the comment in download_candles.py.
     existing_min, existing_max = get_saved_range("taker_volume", "ts", "symbol", symbol)
 
     total = 0
@@ -94,10 +92,10 @@ def download(symbol: str, days_back: int) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--days", type=int, default=30, help="Binance хранит максимум ~30 дней для этого эндпоинта")
+    parser.add_argument("--days", type=int, default=30, help="Binance retains at most ~30 days for this endpoint")
     parser.add_argument("--symbol", default=SYMBOL)
     args = parser.parse_args()
 
-    print(f"Скачиваю Taker Buy/Sell Volume {args.symbol} за последние {args.days} дней...")
+    print(f"Downloading {args.symbol} Taker Buy/Sell Volume for the last {args.days} days...")
     saved = download(args.symbol, args.days)
-    print(f"Готово: обработано {saved} записей.")
+    print(f"Done: {saved} records processed.")

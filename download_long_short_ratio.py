@@ -1,15 +1,12 @@
 """
-Скачивает Top Trader Long/Short Ratio (Positions) с Binance Futures —
-соотношение лонг/шорт позиций топ-трейдеров, ВЗВЕШЕННОЕ по размеру позиции
-(а не по количеству аккаунтов) — см. PLAN.md, почему это важно.
+Downloads Top Trader Long/Short Ratio (Positions) from Binance Futures -
+the long/short positioning of top traders, weighted by position SIZE
+(not account count). "Top traders" are Binance's own top-20% of accounts
+on this contract by margin balance.
 
-Топ-трейдеры здесь — топ-20% аккаунтов на этом конкретном контракте
-по размеру капитала, так их определяет сам Binance.
+Same 30-day history limit as Open Interest (a Binance API restriction).
 
-ВАЖНО: как и с Open Interest, у этого эндпоинта Binance хранит историю
-только за последние ~30 дней, вне зависимости от startTime.
-
-Запуск:
+Usage:
     python download_long_short_ratio.py --days 5
     python download_long_short_ratio.py --days 30
 """
@@ -73,7 +70,7 @@ def download(symbol: str, days_back: int) -> int:
     end_dt = datetime.now(timezone.utc)
     requested_start = end_dt - timedelta(days=days_back)
 
-    # См. подробный комментарий в download_candles.py.
+    # Backfill both ends - see the comment in download_candles.py.
     existing_min, existing_max = get_saved_range("top_trader_ratio", "ts", "symbol", symbol)
 
     total = 0
@@ -95,10 +92,10 @@ def download(symbol: str, days_back: int) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--days", type=int, default=30, help="Binance хранит максимум ~30 дней для этого эндпоинта")
+    parser.add_argument("--days", type=int, default=30, help="Binance retains at most ~30 days for this endpoint")
     parser.add_argument("--symbol", default=SYMBOL)
     args = parser.parse_args()
 
-    print(f"Скачиваю Top Trader Long/Short Ratio {args.symbol} за последние {args.days} дней...")
+    print(f"Downloading {args.symbol} Top Trader Long/Short Ratio for the last {args.days} days...")
     saved = download(args.symbol, args.days)
-    print(f"Готово: обработано {saved} записей.")
+    print(f"Done: {saved} records processed.")

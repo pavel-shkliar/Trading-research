@@ -1,14 +1,13 @@
 """
-Скачивает историю Open Interest (суммарный объём открытых позиций)
-с Binance Futures в таблицу open_interest.
+Downloads Open Interest history from Binance Futures into the
+open_interest table.
 
-ВАЖНО (ограничение самого Binance API, не нашего кода): этот эндпоинт
-отдаёт историю максимум примерно за 30 дней назад, сколько бы дней
-назад ни попросить в startTime. Длинную историю тут получить нельзя —
-вместо этого копим свою историю вперёд, регулярно перезапуская этот
-скрипт (см. шаг 7 плана — автоматизация через cron).
+Binance API limitation (not ours): this endpoint only returns roughly the
+last 30 days of history, regardless of the requested startTime. Longer
+history isn't obtainable here - it's accumulated going forward instead by
+re-running this script on a schedule (see the daily task).
 
-Запуск:
+Usage:
     python download_open_interest.py --days 5
     python download_open_interest.py --days 30
 """
@@ -21,7 +20,7 @@ from binance_api import get
 from db import get_saved_range, upsert_rows
 
 SYMBOL = "BTCUSDT"
-PERIOD = "1d"  # дневная агрегация - совпадает по частоте со свечами
+PERIOD = "1d"  # daily aggregation, matches candle frequency
 LIMIT = 500
 
 
@@ -71,7 +70,7 @@ def download(symbol: str, days_back: int) -> int:
     end_dt = datetime.now(timezone.utc)
     requested_start = end_dt - timedelta(days=days_back)
 
-    # См. подробный комментарий в download_candles.py.
+    # Backfill both ends - see the comment in download_candles.py.
     existing_min, existing_max = get_saved_range("open_interest", "ts", "symbol", symbol)
 
     total = 0
@@ -93,10 +92,10 @@ def download(symbol: str, days_back: int) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--days", type=int, default=30, help="Binance хранит максимум ~30 дней для этого эндпоинта")
+    parser.add_argument("--days", type=int, default=30, help="Binance retains at most ~30 days for this endpoint")
     parser.add_argument("--symbol", default=SYMBOL)
     args = parser.parse_args()
 
-    print(f"Скачиваю Open Interest {args.symbol} за последние {args.days} дней...")
+    print(f"Downloading {args.symbol} Open Interest for the last {args.days} days...")
     saved = download(args.symbol, args.days)
-    print(f"Готово: обработано {saved} записей Open Interest.")
+    print(f"Done: {saved} Open Interest records processed.")

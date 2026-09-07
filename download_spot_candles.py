@@ -1,16 +1,12 @@
 """
-Скачивает дневные СПОТОВЫЕ свечи (не фьючерсные) с Binance - нужны для
-расчёта базиса (разницы между фьючерсной и спотовой ценой), см. H13
-в HYPOTHESES.md.
+Downloads daily SPOT candles (not futures) from Binance - needed to
+compute the futures/spot basis (see H13 in HYPOTHESES.md).
 
-Спотовый и фьючерсный API Binance - это РАЗНЫЕ эндпоинты с разным базовым
-адресом (spot: api.binance.com, futures: fapi.binance.com), хотя формат
-ответа одинаковый.
+Binance's spot and futures APIs are separate endpoints with different
+base URLs (spot: api.binance.com, futures: fapi.binance.com), though the
+response format is the same. Saved into its own spot_candles table.
 
-Сохраняем в отдельную таблицу spot_candles (не смешиваем с candles,
-которая для фьючерсов).
-
-Запуск:
+Usage:
     python download_spot_candles.py --symbol BTCUSDT --days 2600
 """
 
@@ -20,28 +16,11 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from db import get_connection, get_saved_range, upsert_rows
+from db import get_saved_range, upsert_rows
 
 SPOT_BASE_URL = "https://api.binance.com"
 INTERVAL = "1d"
 LIMIT = 1000
-
-
-def create_table():
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS spot_candles (
-                    symbol TEXT NOT NULL,
-                    open_time TIMESTAMPTZ NOT NULL,
-                    close DOUBLE PRECISION NOT NULL,
-                    UNIQUE (symbol, open_time)
-                );
-            """)
-        conn.commit()
-    finally:
-        conn.close()
 
 
 def fetch_klines(symbol: str, start_ms: int, end_ms: int) -> list:
@@ -92,7 +71,6 @@ if __name__ == "__main__":
     parser.add_argument("--days", type=int, default=2600)
     args = parser.parse_args()
 
-    create_table()
-    print(f"Скачиваю спотовые свечи {args.symbol} за последние {args.days} дней...")
+    print(f"Downloading {args.symbol} spot candles for the last {args.days} days...")
     saved = download(args.symbol, args.days)
-    print(f"Готово: обработано {saved} свечей.")
+    print(f"Done: {saved} candles processed.")

@@ -1,8 +1,6 @@
 """
-Общий модуль для работы с базой данных Postgres.
-
-Все скрипты скачивания данных импортируют отсюда get_connection()
-и create_tables() — чтобы не дублировать код подключения в каждом файле.
+Postgres connection and schema module, shared by every download and
+analysis script in the project.
 """
 
 import os
@@ -11,13 +9,10 @@ import psycopg2
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 
-# Подгружает переменные из файла .env (host, user, password и т.д.)
-# в окружение процесса, как будто ты их прописал через set/export вручную.
 load_dotenv()
 
 
 def get_connection():
-    """Открывает новое соединение с базой Postgres, используя данные из .env."""
     return psycopg2.connect(
         host=os.environ["POSTGRES_HOST"],
         port=os.environ["POSTGRES_PORT"],
@@ -27,10 +22,9 @@ def get_connection():
     )
 
 
-# SQL для создания всех таблиц проекта. Каждая таблица имеет UNIQUE
-# ограничение на (symbol, время) — это защита от дублей: если случайно
-# попробовать вставить строку, которая уже есть, база её просто проигнорирует
-# (см. ON CONFLICT DO NOTHING в скриптах скачивания).
+# Every table has a UNIQUE(symbol, time) constraint, enforced together with
+# ON CONFLICT DO NOTHING in upsert_rows() below - the de-duplication guard
+# for incremental, idempotent re-runs.
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS candles (
     symbol TEXT NOT NULL,
@@ -87,11 +81,15 @@ CREATE TABLE IF NOT EXISTS dvol (
     UNIQUE (currency, ts)
 );
 
--- Таблица для посчитанных индикаторов (шаг 4 плана) - в отличие от таблиц
--- выше, тут не "сырые" данные с биржи, а то, что мы сами вычислили поверх
--- них. Отдельная таблица, а не колонки в candles - чтобы можно было
--- пересчитать/удалить индикаторы и переделать заново, не трогая сырые
--- данные.
+CREATE TABLE IF NOT EXISTS spot_candles (
+    symbol TEXT NOT NULL,
+    open_time TIMESTAMPTZ NOT NULL,
+    close DOUBLE PRECISION NOT NULL,
+    UNIQUE (symbol, open_time)
+);
+
+-- Derived indicators, kept separate from the raw candles table so they can
+-- be recomputed/dropped without touching raw exchange data.
 CREATE TABLE IF NOT EXISTS indicators (
     symbol TEXT NOT NULL,
     date TIMESTAMPTZ NOT NULL,
@@ -112,8 +110,6 @@ CREATE TABLE IF NOT EXISTS indicators (
 
 
 def create_tables():
-    """Создаёт все таблицы проекта, если их ещё нет (безопасно запускать
-    повторно — IF NOT EXISTS не даст ничего сломать)."""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -124,18 +120,10 @@ def create_tables():
 
 
 def upsert_rows(table: str, columns: list, rows: list, conflict_columns: list) -> int:
-    """
-    Массово вставляет строки в таблицу, игнорируя те, что уже есть
-    (по UNIQUE-ограничению на conflict_columns).
-
-    table — имя таблицы, columns — список имён столбцов в том же порядке,
-    что и значения внутри каждого кортежа rows, conflict_columns —
-    по каким столбцам проверять "а такая запись уже есть?" (обычно
-    symbol + время).
-
-    Возвращает количество строк, которые пытались вставить (не факт, что
-    все реально новые — часть могла быть проигнорирована как дубль).
-    """
+    """Bulk-insert rows, silently skipping any that violate the table's
+    UNIQUE(conflict_columns) constraint. Returns the number of rows
+    attempted, not the number actually new (duplicates are skipped, not
+    counted separately)."""
     if not rows:
         return 0
 
@@ -156,9 +144,7 @@ def upsert_rows(table: str, columns: list, rows: list, conflict_columns: list) -
 
 
 def get_last_timestamp(table: str, time_column: str, symbol_column: str, symbol_value: str):
-    """Возвращает самое позднее сохранённое время для данного symbol/currency
-    в указанной таблице — нужно для инкрементального скачивания (качаем
-    только то, чего ещё нет)."""
+    """Latest saved timestamp for a symbol - used to fetch only new data."""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -172,11 +158,10 @@ def get_last_timestamp(table: str, time_column: str, symbol_column: str, symbol_
 
 
 def get_saved_range(table: str, time_column: str, symbol_column: str, symbol_value: str):
-    """Возвращает (самое раннее, самое позднее) сохранённое время для
-    данного symbol/currency. Нужно, чтобы правильно докачивать данные
-    с ДВУХ сторон: и более старую историю (если раньше скачали только
-    недавний тестовый кусок), и более новую (обычное инкрементальное
-    обновление). Если данных ещё нет вообще — вернёт (None, None)."""
+    """(earliest, latest) saved timestamp for a symbol. Backfilling needs
+    both ends: older history (if only a recent test window was ever
+    fetched) and newer history (the normal incremental case). Returns
+    (None, None) if nothing is saved yet."""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -190,11 +175,8 @@ def get_saved_range(table: str, time_column: str, symbol_column: str, symbol_val
 
 
 def read_df(query: str, params: tuple = None):
-    """Выполняет SQL-запрос и возвращает результат как pandas DataFrame -
-    удобно для скриптов, которые считают индикаторы (compute_indicators.py
-    и далее бэктест)."""
-    import pandas as pd  # импорт здесь, а не в шапке файла - чтобы модуль
-    # db.py оставался лёгким для скриптов, которым pandas не нужен
+    """Run a query and return the result as a pandas DataFrame."""
+    import pandas as pd  # local import so db.py stays light for scripts that don't need pandas
 
     conn = get_connection()
     try:
@@ -205,4 +187,4 @@ def read_df(query: str, params: tuple = None):
 
 if __name__ == "__main__":
     create_tables()
-    print("Таблицы созданы (или уже существовали).")
+    print("Tables created (or already existed).")
