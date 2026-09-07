@@ -35,9 +35,13 @@ MIN_HISTORY_DAYS = 400
 
 SYMBOLS = [
     "BTCUSDT", "ETHUSDT", "ZECUSDT", "SOLUSDT", "XRPUSDT",
-    "HYPEUSDT", "DOGEUSDT", "ARBUSDT", "SNDKUSDT", "BNBUSDT",
+    "HYPEUSDT", "DOGEUSDT", "ARBUSDT", "BNBUSDT",
     "RAYSOLUSDT", "SUIUSDT", "NEARUSDT", "TAOUSDT", "LINKUSDT",
-    "WLDUSDT", "UNIUSDT", "PUMPUSDT", "BZUSDT", "MARSCOINUSDT",
+    "WLDUSDT", "UNIUSDT", "PUMPUSDT",
+    # SNDKUSDT, BZUSDT, MARSCOINUSDT исключены (история < 400 дней) -
+    # заменены на давно торгуемые монеты, чтобы снова было 20 в исходном
+    # списке (17 прошли фильтр по истории + эти 3 = 20):
+    "ADAUSDT", "LTCUSDT", "AVAXUSDT",
 ]
 
 
